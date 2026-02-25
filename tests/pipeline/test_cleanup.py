@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from src.models.stream import Stream
+from src.models.stream_status import StreamStatus
 from src.pipeline.cleanup import CleanupPipeline
 from src.stream_repository import StreamRepository
 
@@ -46,7 +47,7 @@ def test_cleanup_video_deletes_files(
     repository.insert(
         Stream(
             video_id="video1",
-            status="uploaded",
+            status=StreamStatus.UPLOADED,
             title="Test Video",
             local_path=str(video_path),
         )
@@ -66,7 +67,7 @@ def test_cleanup_video_deletes_files(
     assert not thumb_dir.exists()
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "cleaned"
+    assert result.status == StreamStatus.CLEANED
 
 
 def test_cleanup_video_handles_missing_files(
@@ -88,7 +89,7 @@ def test_cleanup_video_handles_missing_files(
     repository.insert(
         Stream(
             video_id="video1",
-            status="uploaded",
+            status=StreamStatus.UPLOADED,
             title="Test Video",
             local_path="/nonexistent/video.mp4",
         )
@@ -106,4 +107,4 @@ def test_cleanup_video_handles_missing_files(
     assert success is True
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "cleaned"
+    assert result.status == StreamStatus.CLEANED

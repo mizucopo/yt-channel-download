@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.models.stream import Stream
+from src.models.stream_status import StreamStatus
 from src.pipeline.thumbs import ThumbsPipeline
 from src.stream_repository import StreamRepository
 
@@ -38,7 +39,7 @@ def test_extract_thumbnails_updates_status_on_success(
     repository.insert(
         Stream(
             video_id="video1",
-            status="downloaded",
+            status=StreamStatus.DOWNLOADED,
             title="Test Video",
             local_path="/path/to/video.mp4",
         )
@@ -63,7 +64,7 @@ def test_extract_thumbnails_updates_status_on_success(
     assert success is True
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "thumbs_done"
+    assert result.status == StreamStatus.THUMBS_DONE
 
 
 def test_extract_thumbnails_reverts_status_on_failure(
@@ -85,7 +86,7 @@ def test_extract_thumbnails_reverts_status_on_failure(
     repository.insert(
         Stream(
             video_id="video1",
-            status="downloaded",
+            status=StreamStatus.DOWNLOADED,
             title="Test Video",
             local_path="/path/to/video.mp4",
         )
@@ -110,4 +111,4 @@ def test_extract_thumbnails_reverts_status_on_failure(
     assert success is False
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "downloaded"
+    assert result.status == StreamStatus.DOWNLOADED

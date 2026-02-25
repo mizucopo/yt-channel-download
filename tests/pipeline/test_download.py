@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.models.stream import Stream
+from src.models.stream_status import StreamStatus
 from src.pipeline.download import DownloadPipeline
 from src.stream_repository import StreamRepository
 
@@ -36,7 +37,7 @@ def test_download_video_updates_status_on_success(
     """
     # Arrange
     repository.insert(
-        Stream(video_id="video1", status="discovered", title="Test Video")
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Test Video")
     )
 
     mock_result = Mock()
@@ -57,7 +58,7 @@ def test_download_video_updates_status_on_success(
     assert success is True
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "downloaded"
+    assert result.status == StreamStatus.DOWNLOADED
 
 
 def test_download_video_reverts_status_on_failure(
@@ -77,7 +78,7 @@ def test_download_video_reverts_status_on_failure(
     """
     # Arrange
     repository.insert(
-        Stream(video_id="video1", status="discovered", title="Test Video")
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Test Video")
     )
 
     mock_result = Mock()
@@ -98,7 +99,7 @@ def test_download_video_reverts_status_on_failure(
     assert success is False
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "discovered"
+    assert result.status == StreamStatus.DISCOVERED
     assert result.retry_count == 1
 
 
@@ -119,7 +120,7 @@ def test_download_video_fails_on_cas_mismatch(
     """
     # Arrange
     repository.insert(
-        Stream(video_id="video1", status="downloaded", title="Test Video")
+        Stream(video_id="video1", status=StreamStatus.DOWNLOADED, title="Test Video")
     )
 
     download_dir = tmp_path / "downloads"

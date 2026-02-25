@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from src.models.stream import Stream
+from src.models.stream_status import StreamStatus
 from src.pipeline.recover import RecoverPipeline
 from src.stream_repository import StreamRepository
 
@@ -34,7 +35,7 @@ def test_recover_all_reverts_downloading_to_discovered(
     """
     # Arrange
     repository.insert(
-        Stream(video_id="video1", status="downloading", title="Test Video")
+        Stream(video_id="video1", status=StreamStatus.DOWNLOADING, title="Test Video")
     )
 
     # Act
@@ -44,7 +45,7 @@ def test_recover_all_reverts_downloading_to_discovered(
     assert count == 1
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "discovered"
+    assert result.status == StreamStatus.DISCOVERED
 
 
 def test_recover_all_reverts_uploading_to_thumbs_done(
@@ -62,7 +63,9 @@ def test_recover_all_reverts_uploading_to_thumbs_done(
         ステータスがthumbs_doneに戻っていること。
     """
     # Arrange
-    repository.insert(Stream(video_id="video1", status="uploading", title="Test Video"))
+    repository.insert(
+        Stream(video_id="video1", status=StreamStatus.UPLOADING, title="Test Video")
+    )
 
     # Act
     count = RecoverPipeline(max_retries=3, repository=repository).recover_all()
@@ -71,7 +74,7 @@ def test_recover_all_reverts_uploading_to_thumbs_done(
     assert count == 1
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "thumbs_done"
+    assert result.status == StreamStatus.THUMBS_DONE
 
 
 def test_recover_all_respects_max_retries(repository: StreamRepository) -> None:
@@ -88,14 +91,14 @@ def test_recover_all_respects_max_retries(repository: StreamRepository) -> None:
     """
     # Arrange
     repository.insert(
-        Stream(video_id="video1", status="downloading", title="Test Video")
+        Stream(video_id="video1", status=StreamStatus.DOWNLOADING, title="Test Video")
     )
     # リトライ回数を上限まで増やす
     for _ in range(3):
         repository.update_status(
             "video1",
-            "downloading",
-            expected_old_status="downloading",
+            StreamStatus.DOWNLOADING,
+            expected_old_status=StreamStatus.DOWNLOADING,
             increment_retry=True,
         )
 
@@ -106,4 +109,4 @@ def test_recover_all_respects_max_retries(repository: StreamRepository) -> None:
     assert count == 0
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "downloading"
+    assert result.status == StreamStatus.DOWNLOADING

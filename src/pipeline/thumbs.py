@@ -7,6 +7,8 @@ import logging
 import subprocess
 from pathlib import Path
 
+from src.models.stream_status import StreamStatus
+from src.stream_repository import StreamRepository
 from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
@@ -20,7 +22,7 @@ class ThumbsPipeline:
         max_retries: int,
         thumbnail_interval: int,
         thumbnail_dir: Path,
-        repository: "StreamRepository",
+        repository: StreamRepository,
     ) -> None:
         """パイプラインを初期化する.
 
@@ -48,8 +50,8 @@ class ThumbsPipeline:
         # CAS更新: downloaded -> thumbs_done
         updated = self._repository.update_status(
             video_id,
-            "thumbs_done",
-            expected_old_status="downloaded",
+            StreamStatus.THUMBS_DONE,
+            expected_old_status=StreamStatus.DOWNLOADED,
         )
         if not updated:
             logger.warning(
@@ -90,8 +92,8 @@ class ThumbsPipeline:
                 )
                 self._repository.update_status(
                     video_id,
-                    "downloaded",
-                    expected_old_status="thumbs_done",
+                    StreamStatus.DOWNLOADED,
+                    expected_old_status=StreamStatus.THUMBS_DONE,
                     error_message=(
                         result.stderr[:500] if result.stderr else "Unknown error"
                     ),
@@ -106,8 +108,8 @@ class ThumbsPipeline:
             logger.exception("Thumbnail extraction error for %s", video_id)
             self._repository.update_status(
                 video_id,
-                "downloaded",
-                expected_old_status="thumbs_done",
+                StreamStatus.DOWNLOADED,
+                expected_old_status=StreamStatus.THUMBS_DONE,
                 error_message=str(e)[:500],
                 increment_retry=True,
             )
@@ -119,7 +121,9 @@ class ThumbsPipeline:
         Returns:
             抽出対象があった場合はTrue
         """
-        stream = self._repository.get_next_pending("downloaded", self._max_retries)
+        stream = self._repository.get_next_pending(
+            StreamStatus.DOWNLOADED, self._max_retries
+        )
         if stream is None or stream.local_path is None:
             return False
 
@@ -137,6 +141,3 @@ class ThumbsPipeline:
                 break
             count += 1
         return count
-
-
-from src.stream_repository import StreamRepository  # noqa: E402

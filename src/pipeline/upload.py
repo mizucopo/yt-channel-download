@@ -8,6 +8,8 @@ from pathlib import Path
 
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
+from src.models.stream_status import StreamStatus
+from src.stream_repository import StreamRepository
 from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ class UploadPipeline:
         gdrive_provider: GoogleDriveProvider,
         gdrive_root_folder_id: str,
         thumbnail_dir: Path,
-        repository: "StreamRepository",
+        repository: StreamRepository,
     ) -> None:
         """パイプラインを初期化する.
 
@@ -52,8 +54,8 @@ class UploadPipeline:
         # CAS更新: thumbs_done -> uploading
         updated = self._repository.update_status(
             video_id,
-            "uploading",
-            expected_old_status="thumbs_done",
+            StreamStatus.UPLOADING,
+            expected_old_status=StreamStatus.THUMBS_DONE,
         )
         if not updated:
             logger.warning("Failed to acquire lock for upload: %s", video_id)
@@ -85,8 +87,8 @@ class UploadPipeline:
             # CAS更新: uploading -> uploaded
             self._repository.update_status(
                 video_id,
-                "uploaded",
-                expected_old_status="uploading",
+                StreamStatus.UPLOADED,
+                expected_old_status=StreamStatus.UPLOADING,
                 gdrive_file_id=video_gdrive_id,
                 gdrive_file_name=video_file.name,
             )
@@ -97,8 +99,8 @@ class UploadPipeline:
             logger.exception("Upload error for %s", video_id)
             self._repository.update_status(
                 video_id,
-                "thumbs_done",
-                expected_old_status="uploading",
+                StreamStatus.THUMBS_DONE,
+                expected_old_status=StreamStatus.UPLOADING,
                 error_message=str(e)[:500],
                 increment_retry=True,
             )
@@ -110,7 +112,9 @@ class UploadPipeline:
         Returns:
             アップロード対象があった場合はTrue
         """
-        stream = self._repository.get_next_pending("thumbs_done", self._max_retries)
+        stream = self._repository.get_next_pending(
+            StreamStatus.THUMBS_DONE, self._max_retries
+        )
         if stream is None or stream.local_path is None:
             return False
 
@@ -128,6 +132,3 @@ class UploadPipeline:
                 break
             count += 1
         return count
-
-
-from src.stream_repository import StreamRepository  # noqa: E402

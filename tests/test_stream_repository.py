@@ -1,10 +1,11 @@
-"""データベースモジュールのテスト."""
+"""ストリームリポジトリのテスト."""
 
 from pathlib import Path
 
 import pytest
 
 from src.models.stream import Stream
+from src.models.stream_status import StreamStatus
 from src.stream_repository import StreamRepository
 
 
@@ -32,7 +33,7 @@ def test_insert_creates_new_record(repository: StreamRepository) -> None:
     # Arrange
     stream = Stream(
         video_id="test_video_id",
-        status="discovered",
+        status=StreamStatus.DISCOVERED,
         title="Test Video",
         published_at="2024-01-01T00:00:00",
     )
@@ -44,7 +45,7 @@ def test_insert_creates_new_record(repository: StreamRepository) -> None:
     result = repository.get("test_video_id")
     assert result is not None
     assert result.video_id == "test_video_id"
-    assert result.status == "discovered"
+    assert result.status == StreamStatus.DISCOVERED
     assert result.title == "Test Video"
 
 
@@ -82,12 +83,18 @@ def test_get_by_status_returns_matching_records(
         指定したステータスのストリームのみが返されること。
     """
     # Arrange
-    repository.insert(Stream(video_id="video1", status="discovered", title="Video 1"))
-    repository.insert(Stream(video_id="video2", status="downloaded", title="Video 2"))
-    repository.insert(Stream(video_id="video3", status="discovered", title="Video 3"))
+    repository.insert(
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Video 1")
+    )
+    repository.insert(
+        Stream(video_id="video2", status=StreamStatus.DOWNLOADED, title="Video 2")
+    )
+    repository.insert(
+        Stream(video_id="video3", status=StreamStatus.DISCOVERED, title="Video 3")
+    )
 
     # Act
-    result = repository.get_by_status("discovered")
+    result = repository.get_by_status(StreamStatus.DISCOVERED)
 
     # Assert
     assert len(result) == 2
@@ -111,19 +118,19 @@ def test_update_status_changes_status(repository: StreamRepository) -> None:
     """
     # Arrange
     repository.insert(
-        Stream(video_id="video1", status="discovered", title="Test Video")
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Test Video")
     )
 
     # Act
     success = repository.update_status(
-        "video1", "downloaded", expected_old_status="discovered"
+        "video1", StreamStatus.DOWNLOADED, expected_old_status=StreamStatus.DISCOVERED
     )
 
     # Assert
     assert success is True
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "downloaded"
+    assert result.status == StreamStatus.DOWNLOADED
 
 
 def test_update_status_with_cas_fails_on_mismatch(repository: StreamRepository) -> None:
@@ -140,19 +147,21 @@ def test_update_status_with_cas_fails_on_mismatch(repository: StreamRepository) 
     """
     # Arrange
     repository.insert(
-        Stream(video_id="video1", status="discovered", title="Test Video")
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Test Video")
     )
 
     # Act
     success = repository.update_status(
-        "video1", "uploading", expected_old_status="downloaded"
+        "video1",
+        StreamStatus.UPLOADING,
+        expected_old_status=StreamStatus.DOWNLOADED,
     )
 
     # Assert
     assert success is False
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "discovered"
+    assert result.status == StreamStatus.DISCOVERED
 
 
 def test_update_status_updates_local_path(repository: StreamRepository) -> None:
@@ -169,14 +178,14 @@ def test_update_status_updates_local_path(repository: StreamRepository) -> None:
     """
     # Arrange
     repository.insert(
-        Stream(video_id="video1", status="discovered", title="Test Video")
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Test Video")
     )
 
     # Act
     success = repository.update_status(
         "video1",
-        "downloaded",
-        expected_old_status="discovered",
+        StreamStatus.DOWNLOADED,
+        expected_old_status=StreamStatus.DISCOVERED,
         local_path="/path/to/video.mp4",
     )
 
@@ -184,7 +193,7 @@ def test_update_status_updates_local_path(repository: StreamRepository) -> None:
     assert success is True
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "downloaded"
+    assert result.status == StreamStatus.DOWNLOADED
     assert result.local_path == "/path/to/video.mp4"
 
 
@@ -201,11 +210,15 @@ def test_get_next_pending_returns_oldest_record(repository: StreamRepository) ->
         最も古いレコードが返されること。
     """
     # Arrange
-    repository.insert(Stream(video_id="video1", status="discovered", title="Video 1"))
-    repository.insert(Stream(video_id="video2", status="discovered", title="Video 2"))
+    repository.insert(
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Video 1")
+    )
+    repository.insert(
+        Stream(video_id="video2", status=StreamStatus.DISCOVERED, title="Video 2")
+    )
 
     # Act
-    result = repository.get_next_pending("discovered", max_retries=3)
+    result = repository.get_next_pending(StreamStatus.DISCOVERED, max_retries=3)
 
     # Assert
     assert result is not None
@@ -225,15 +238,22 @@ def test_get_next_pending_respects_max_retries(repository: StreamRepository) -> 
         リトライ回数が上限未満のストリームのみが返されること。
     """
     # Arrange
-    repository.insert(Stream(video_id="video1", status="discovered", title="Video 1"))
-    repository.insert(Stream(video_id="video2", status="discovered", title="Video 2"))
+    repository.insert(
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Video 1")
+    )
+    repository.insert(
+        Stream(video_id="video2", status=StreamStatus.DISCOVERED, title="Video 2")
+    )
     # video1のリトライ回数を増やす
     repository.update_status(
-        "video1", "discovered", expected_old_status="discovered", increment_retry=True
+        "video1",
+        StreamStatus.DISCOVERED,
+        expected_old_status=StreamStatus.DISCOVERED,
+        increment_retry=True,
     )
 
     # Act
-    result = repository.get_next_pending("discovered", max_retries=1)
+    result = repository.get_next_pending(StreamStatus.DISCOVERED, max_retries=1)
 
     # Assert
     assert result is not None

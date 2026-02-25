@@ -1,4 +1,4 @@
-"""データベースモジュール.
+"""ストリームリポジトリ.
 
 SQLiteを使用してストリーム情報を管理する。
 """
@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from src.models.stream import Stream
+from src.models.stream_status import StreamStatus
 
 
 class StreamRepository:
@@ -71,7 +72,7 @@ class StreamRepository:
         """
         return Stream(
             video_id=row["video_id"],
-            status=row["status"],
+            status=StreamStatus(row["status"]),
             title=row["title"],
             published_at=row["published_at"],
             local_path=row["local_path"],
@@ -101,7 +102,7 @@ class StreamRepository:
                 """,
                 (
                     stream.video_id,
-                    stream.status,
+                    stream.status.value,
                     stream.title,
                     stream.published_at,
                     now,
@@ -134,7 +135,7 @@ class StreamRepository:
         finally:
             conn.close()
 
-    def get_by_status(self, status: str) -> list[Stream]:
+    def get_by_status(self, status: StreamStatus) -> list[Stream]:
         """指定されたステータスのストリーム一覧を取得する.
 
         Args:
@@ -147,7 +148,7 @@ class StreamRepository:
         try:
             cursor = conn.execute(
                 "SELECT * FROM streams WHERE status = ? ORDER BY published_at DESC",
-                (status,),
+                (status.value,),
             )
             rows = cursor.fetchall()
             return [self._row_to_stream(row) for row in rows]
@@ -157,9 +158,9 @@ class StreamRepository:
     def update_status(
         self,
         video_id: str,
-        new_status: str,
+        new_status: StreamStatus,
         *,
-        expected_old_status: str | None = None,
+        expected_old_status: StreamStatus | None = None,
         local_path: str | None = None,
         gdrive_file_id: str | None = None,
         gdrive_file_name: str | None = None,
@@ -187,7 +188,7 @@ class StreamRepository:
 
             # 動的SQLを構築
             updates: list[str] = ["status = ?", "updated_at = ?"]
-            params: list[Any] = [new_status, now]
+            params: list[Any] = [new_status.value, now]
 
             if local_path is not None:
                 updates.append("local_path = ?")
@@ -214,7 +215,7 @@ class StreamRepository:
 
             if expected_old_status is not None:
                 sql += " AND status = ?"
-                params.append(expected_old_status)
+                params.append(expected_old_status.value)
 
             cursor = conn.execute(sql, params)
             conn.commit()
@@ -222,7 +223,7 @@ class StreamRepository:
         finally:
             conn.close()
 
-    def get_next_pending(self, status: str, max_retries: int) -> Stream | None:
+    def get_next_pending(self, status: StreamStatus, max_retries: int) -> Stream | None:
         """次の処理対象を取得する.
 
         リトライ回数が上限に達していないストリームを取得する。
@@ -243,7 +244,7 @@ class StreamRepository:
                 ORDER BY created_at ASC
                 LIMIT 1
                 """,
-                (status, max_retries),
+                (status.value, max_retries),
             )
             row = cursor.fetchone()
             if row is None:

@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 
 from src.models.stream import Stream
+from src.models.stream_status import StreamStatus
 from src.pipeline.upload import UploadPipeline
 from src.stream_repository import StreamRepository
 
@@ -42,7 +43,7 @@ def test_upload_video_updates_status_on_success(
     repository.insert(
         Stream(
             video_id="video1",
-            status="thumbs_done",
+            status=StreamStatus.THUMBS_DONE,
             title="Test Video",
             local_path=str(video_path),
         )
@@ -66,7 +67,7 @@ def test_upload_video_updates_status_on_success(
     assert success is True
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "uploaded"
+    assert result.status == StreamStatus.UPLOADED
     assert result.gdrive_file_id == "gdrive_file_id"
 
 
@@ -93,7 +94,7 @@ def test_upload_video_reverts_status_on_failure(
     repository.insert(
         Stream(
             video_id="video1",
-            status="thumbs_done",
+            status=StreamStatus.THUMBS_DONE,
             title="Test Video",
             local_path=str(video_path),
         )
@@ -117,4 +118,4 @@ def test_upload_video_reverts_status_on_failure(
     assert success is False
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "thumbs_done"
+    assert result.status == StreamStatus.THUMBS_DONE

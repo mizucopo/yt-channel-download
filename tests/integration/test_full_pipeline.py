@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from src.models.stream_status import StreamStatus
 from src.models.video_info import VideoInfo
 from src.pipeline.cleanup import CleanupPipeline
 from src.pipeline.discover import DiscoverPipeline
@@ -76,7 +77,7 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
 
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "discovered"
+    assert result.status == StreamStatus.DISCOVERED
 
     # Act & Assert - Download
     video_path = download_dir / "video1.mp4"
@@ -93,7 +94,7 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
 
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "downloaded"
+    assert result.status == StreamStatus.DOWNLOADED
 
     # Act & Assert - Thumbnails
     with patch("subprocess.run", return_value=mock_thumb_result):
@@ -107,7 +108,7 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
 
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "thumbs_done"
+    assert result.status == StreamStatus.THUMBS_DONE
 
     # Act & Assert - Upload
     success = UploadPipeline(
@@ -121,7 +122,7 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
 
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "uploaded"
+    assert result.status == StreamStatus.UPLOADED
 
     # Act & Assert - Cleanup
     success = CleanupPipeline(
@@ -134,4 +135,4 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
 
     result = repository.get("video1")
     assert result is not None
-    assert result.status == "cleaned"
+    assert result.status == StreamStatus.CLEANED

@@ -10,6 +10,7 @@ import click
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
 from src.config import settings
+from src.models.stream_status import StreamStatus
 from src.pipeline.cleanup import CleanupPipeline
 from src.pipeline.discover import DiscoverPipeline
 from src.pipeline.download import DownloadPipeline
@@ -257,20 +258,11 @@ def upload_one(video_id: str) -> None:
 def status() -> None:
     """現在のステータスを表示する."""
     repository = _get_repository()
-    statuses = [
-        "discovered",
-        "downloading",
-        "downloaded",
-        "thumbs_done",
-        "uploading",
-        "uploaded",
-        "cleaned",
-    ]
 
     click.echo("Current status:")
-    for status_name in statuses:
-        streams = repository.get_by_status(status_name)
-        click.echo(f"  {status_name}: {len(streams)}")
+    for status in StreamStatus:
+        streams = repository.get_by_status(status)
+        click.echo(f"  {status.value}: {len(streams)}")
 
 
 if __name__ == "__main__":

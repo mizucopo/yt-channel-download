@@ -7,6 +7,8 @@ import logging
 import shutil
 from pathlib import Path
 
+from src.models.stream_status import StreamStatus
+from src.stream_repository import StreamRepository
 from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
@@ -20,7 +22,7 @@ class CleanupPipeline:
         max_retries: int,
         download_dir: Path,
         thumbnail_dir: Path,
-        repository: "StreamRepository",
+        repository: StreamRepository,
     ) -> None:
         """パイプラインを初期化する.
 
@@ -48,8 +50,8 @@ class CleanupPipeline:
         # CAS更新: uploaded -> cleaned
         updated = self._repository.update_status(
             video_id,
-            "cleaned",
-            expected_old_status="uploaded",
+            StreamStatus.CLEANED,
+            expected_old_status=StreamStatus.UPLOADED,
         )
         if not updated:
             logger.warning("Failed to acquire lock for cleanup: %s", video_id)
@@ -82,7 +84,9 @@ class CleanupPipeline:
         Returns:
             クリーンアップ対象があった場合はTrue
         """
-        stream = self._repository.get_next_pending("uploaded", self._max_retries)
+        stream = self._repository.get_next_pending(
+            StreamStatus.UPLOADED, self._max_retries
+        )
         if stream is None or stream.local_path is None:
             return False
 
@@ -100,6 +104,3 @@ class CleanupPipeline:
                 break
             count += 1
         return count
-
-
-from src.stream_repository import StreamRepository  # noqa: E402

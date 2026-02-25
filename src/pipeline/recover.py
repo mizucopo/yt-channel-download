@@ -5,13 +5,16 @@
 
 import logging
 
+from src.models.stream_status import StreamStatus
+from src.stream_repository import StreamRepository
+
 logger = logging.getLogger(__name__)
 
 
 class RecoverPipeline:
     """中断状態回復パイプライン."""
 
-    def __init__(self, max_retries: int, repository: "StreamRepository") -> None:
+    def __init__(self, max_retries: int, repository: StreamRepository) -> None:
         """パイプラインを初期化する.
 
         Args:
@@ -33,15 +36,15 @@ class RecoverPipeline:
         count = 0
 
         # downloading状態をdiscoveredに戻す
-        downloading_streams = self._repository.get_by_status("downloading")
+        downloading_streams = self._repository.get_by_status(StreamStatus.DOWNLOADING)
         for stream in downloading_streams:
             if stream.retry_count >= self._max_retries:
                 continue
 
             updated = self._repository.update_status(
                 stream.video_id,
-                "discovered",
-                expected_old_status="downloading",
+                StreamStatus.DISCOVERED,
+                expected_old_status=StreamStatus.DOWNLOADING,
                 increment_retry=True,
             )
             if updated:
@@ -49,15 +52,15 @@ class RecoverPipeline:
                 count += 1
 
         # uploading状態をthumbs_doneに戻す
-        uploading_streams = self._repository.get_by_status("uploading")
+        uploading_streams = self._repository.get_by_status(StreamStatus.UPLOADING)
         for stream in uploading_streams:
             if stream.retry_count >= self._max_retries:
                 continue
 
             updated = self._repository.update_status(
                 stream.video_id,
-                "thumbs_done",
-                expected_old_status="uploading",
+                StreamStatus.THUMBS_DONE,
+                expected_old_status=StreamStatus.UPLOADING,
                 increment_retry=True,
             )
             if updated:
@@ -65,6 +68,3 @@ class RecoverPipeline:
                 count += 1
 
         return count
-
-
-from src.stream_repository import StreamRepository  # noqa: E402

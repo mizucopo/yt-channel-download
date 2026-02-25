@@ -7,6 +7,8 @@ import logging
 from collections.abc import Sequence
 
 from src.models.stream import Stream
+from src.models.stream_status import StreamStatus
+from src.stream_repository import StreamRepository
 from src.youtube_client import YouTubeClient
 
 logger = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ class DiscoverPipeline:
         self,
         client: YouTubeClient,
         channel_ids: Sequence[str],
-        repository: "StreamRepository",
+        repository: StreamRepository,
     ) -> None:
         """パイプラインを初期化する.
 
@@ -50,7 +52,7 @@ class DiscoverPipeline:
 
                 stream = Stream(
                     video_id=video.video_id,
-                    status="discovered",
+                    status=StreamStatus.DISCOVERED,
                     title=video.title,
                     published_at=video.published_at.isoformat(),
                 )
@@ -61,6 +63,3 @@ class DiscoverPipeline:
                 count += 1
 
         return count
-
-
-from src.stream_repository import StreamRepository  # noqa: E402

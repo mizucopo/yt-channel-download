@@ -7,6 +7,9 @@ import logging
 import subprocess
 from pathlib import Path
 
+from src.models.stream_status import StreamStatus
+from src.stream_repository import StreamRepository
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,7 +20,7 @@ class DownloadPipeline:
         self,
         max_retries: int,
         download_dir: Path,
-        repository: "StreamRepository",
+        repository: StreamRepository,
     ) -> None:
         """パイプラインを初期化する.
 
@@ -42,8 +45,8 @@ class DownloadPipeline:
         # CAS更新: discovered -> downloading
         updated = self._repository.update_status(
             video_id,
-            "downloading",
-            expected_old_status="discovered",
+            StreamStatus.DOWNLOADING,
+            expected_old_status=StreamStatus.DISCOVERED,
         )
         if not updated:
             logger.warning("Failed to acquire lock for video: %s", video_id)
@@ -74,8 +77,8 @@ class DownloadPipeline:
                 logger.error("Download failed for %s: %s", video_id, result.stderr)
                 self._repository.update_status(
                     video_id,
-                    "discovered",
-                    expected_old_status="downloading",
+                    StreamStatus.DISCOVERED,
+                    expected_old_status=StreamStatus.DOWNLOADING,
                     error_message=(
                         result.stderr[:500] if result.stderr else "Unknown error"
                     ),
@@ -86,8 +89,8 @@ class DownloadPipeline:
             # CAS更新: downloading -> downloaded
             self._repository.update_status(
                 video_id,
-                "downloaded",
-                expected_old_status="downloading",
+                StreamStatus.DOWNLOADED,
+                expected_old_status=StreamStatus.DOWNLOADING,
                 local_path=str(output_path),
             )
             logger.info("Download completed: %s", video_id)
@@ -97,8 +100,8 @@ class DownloadPipeline:
             logger.exception("Download error for %s", video_id)
             self._repository.update_status(
                 video_id,
-                "discovered",
-                expected_old_status="downloading",
+                StreamStatus.DISCOVERED,
+                expected_old_status=StreamStatus.DOWNLOADING,
                 error_message=str(e)[:500],
                 increment_retry=True,
             )
@@ -110,7 +113,9 @@ class DownloadPipeline:
         Returns:
             ダウンロード対象があった場合はTrue
         """
-        stream = self._repository.get_next_pending("discovered", self._max_retries)
+        stream = self._repository.get_next_pending(
+            StreamStatus.DISCOVERED, self._max_retries
+        )
         if stream is None:
             return False
 
@@ -128,6 +133,3 @@ class DownloadPipeline:
                 break
             count += 1
         return count
-
-
-from src.stream_repository import StreamRepository  # noqa: E402

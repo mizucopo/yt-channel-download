@@ -2,13 +2,15 @@
 
 from dataclasses import dataclass
 
+from src.models.stream_status import StreamStatus
+
 
 @dataclass(frozen=True)
 class Stream:
     """ストリーム情報を表すデータクラス."""
 
     video_id: str
-    status: str
+    status: StreamStatus
     title: str | None = None
     published_at: str | None = None
     local_path: str | None = None
