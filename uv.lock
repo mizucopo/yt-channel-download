@@ -625,51 +625,6 @@ wheels = [
 ]
 
 [[package]]
-name = "testproject"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "click" },
-    { name = "mizu-common-py" },
-    { name = "pydantic" },
-    { name = "python-decouple" },
-    { name = "yt-dlp" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-mock" },
-    { name = "python-decouple-stubs" },
-    { name = "ruff" },
-    { name = "taskipy" },
-    { name = "types-requests" },
-    { name = "vulture" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "click", specifier = ">=8.0.0" },
-    { name = "mizu-common-py", git = "https://github.com/mizucopo/mizu-common-py.git" },
-    { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "python-decouple", specifier = ">=3.8" },
-    { name = "yt-dlp", specifier = ">=2024.0.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mypy", specifier = ">=1.19.1" },
-    { name = "pytest", specifier = ">=9.0.2" },
-    { name = "pytest-mock", specifier = ">=3.15.1" },
-    { name = "python-decouple-stubs", specifier = ">=0.1" },
-    { name = "ruff", specifier = ">=0.14.10" },
-    { name = "taskipy", specifier = ">=1.14.1" },
-    { name = "types-requests", specifier = ">=2.32.4.20250913" },
-    { name = "vulture", specifier = ">=2.14" },
-]
-
-[[package]]
 name = "tomli"
 version = "2.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -763,4 +718,49 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/58/d9/55ffff25204733e94a507552ad984d5a8a8e4f9d1f0d91763e6b1a41c79b/yt_dlp-2026.2.21.tar.gz", hash = "sha256:4407dfc1a71fec0dee5ef916a8d4b66057812939b509ae45451fa8fb4376b539", size = 3116630, upload-time = "2026-02-21T20:40:53.522Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/40/664c99ee36d80d84ce7a96cd98aebcb3d16c19e6c3ad3461d2cf5424040e/yt_dlp-2026.2.21-py3-none-any.whl", hash = "sha256:0d8408f5b6d20487f5caeb946dfd04f9bcd2f1a3a125b744a0a982b590e449f7", size = 3313392, upload-time = "2026-02-21T20:40:51.514Z" },
+]
+
+[[package]]
+name = "yt-live-download"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "click" },
+    { name = "mizu-common-py" },
+    { name = "pydantic" },
+    { name = "python-decouple" },
+    { name = "yt-dlp" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-mock" },
+    { name = "python-decouple-stubs" },
+    { name = "ruff" },
+    { name = "taskipy" },
+    { name = "types-requests" },
+    { name = "vulture" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "click", specifier = ">=8.0.0" },
+    { name = "mizu-common-py", git = "https://github.com/mizucopo/mizu-common-py.git" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "python-decouple", specifier = ">=3.8" },
+    { name = "yt-dlp", specifier = ">=2024.0.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.19.1" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest-mock", specifier = ">=3.15.1" },
+    { name = "python-decouple-stubs", specifier = ">=0.1" },
+    { name = "ruff", specifier = ">=0.14.10" },
+    { name = "taskipy", specifier = ">=1.14.1" },
+    { name = "types-requests", specifier = ">=2.32.4.20250913" },
+    { name = "vulture", specifier = ">=2.14" },
 ]

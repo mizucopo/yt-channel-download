@@ -1,7 +1,7 @@
 [project]
-name = "TestProject"
+name = "yt-live-download"
 version = "0.1.0"
-description = "Test Project"
+description = "TBD"
 authors = [
     {name = "みず", email = "mizu.copo@gmail.com"}
 ]
