@@ -1,17 +1,26 @@
 """フルパイプライン統合テスト."""
 
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
 from src import db
+from src.models.video_info import VideoInfo
+from src.pipeline.cleanup import CleanupPipeline
+from src.pipeline.discover import DiscoverPipeline
+from src.pipeline.download import DownloadPipeline
+from src.pipeline.thumbs import ThumbsPipeline
+from src.pipeline.upload import UploadPipeline
 
 
 @pytest.fixture(autouse=True)
 def setup_test_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """テスト環境をセットアップする."""
-    monkeypatch.setattr("src.config.settings.database_path", str(tmp_path / "test.db"))
+    monkeypatch.setattr(
+        "src.config.settings.database_path", str(tmp_path / "streams.db")
+    )
     monkeypatch.setattr("src.config.settings.download_dir", str(tmp_path / "downloads"))
     monkeypatch.setattr(
         "src.config.settings.thumbnail_dir", str(tmp_path / "thumbnails")
@@ -26,28 +35,22 @@ def setup_test_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     db.init_db()
 
 
-def test_full_pipeline_flow(tmp_path: Path) -> None:
-    """フルパイプラインが正しく動作すること.
+def test_full_pipeline_processes_video_from_discovery_to_cleanup(
+    tmp_path: Path,
+) -> None:
+    """フルパイプラインが動画を検出からクリーンアップまで処理すること.
 
     Arrange:
-        各ステージのモックを準備する。
+        各パイプラインのモックを準備する。
         動画ファイルを作成する。
 
     Act:
-        各パイプラインステージを順番に実行する。
+        各パイプラインを順番に実行する。
 
     Assert:
         最終的にcleanedステータスになること。
     """
     # Arrange
-    from datetime import datetime, timezone
-
-    from src.models.video_info import VideoInfo
-    from src.pipeline import discover, thumbs, upload
-    from src.pipeline.cleanup import CleanupPipeline
-    from src.pipeline.download import DownloadPipeline
-
-    # Mock YouTube client
     mock_yt_client = Mock()
     mock_yt_client.get_live_archives.return_value = [
         VideoInfo(
@@ -58,23 +61,20 @@ def test_full_pipeline_flow(tmp_path: Path) -> None:
         )
     ]
 
-    # Mock subprocess for download
     mock_download_result = Mock()
     mock_download_result.returncode = 0
     mock_download_result.stderr = ""
 
-    # Mock subprocess for thumbnail
     mock_thumb_result = Mock()
     mock_thumb_result.returncode = 0
     mock_thumb_result.stderr = ""
 
-    # Mock Google Drive provider
     mock_gdrive_provider = Mock()
     mock_gdrive_provider.upload_file.return_value = "gdrive_file_id"
 
     # Act & Assert - Discover
     with patch("src.pipeline.discover.YouTubeClient", return_value=mock_yt_client):
-        count = discover.discover_videos(client=mock_yt_client)
+        count = DiscoverPipeline(client=mock_yt_client).discover_videos()
     assert count == 1
 
     result = db.get_stream("video1")
@@ -99,7 +99,7 @@ def test_full_pipeline_flow(tmp_path: Path) -> None:
 
     # Act & Assert - Thumbnails
     with patch("subprocess.run", return_value=mock_thumb_result):
-        success = thumbs.extract_thumbnails("video1", str(video_path))
+        success = ThumbsPipeline().extract_thumbnails("video1", str(video_path))
     assert success is True
 
     result = db.get_stream("video1")
@@ -110,7 +110,7 @@ def test_full_pipeline_flow(tmp_path: Path) -> None:
     with patch(
         "src.pipeline.upload.GoogleDriveProvider", return_value=mock_gdrive_provider
     ):
-        success = upload.upload_video("video1", str(video_path))
+        success = UploadPipeline().upload_video("video1", str(video_path))
     assert success is True
 
     result = db.get_stream("video1")

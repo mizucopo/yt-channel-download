@@ -9,7 +9,7 @@ import pytest
 from src import db
 from src.models.stream import Stream
 from src.models.video_info import VideoInfo
-from src.pipeline import discover
+from src.pipeline.discover import DiscoverPipeline
 
 
 @pytest.fixture(autouse=True)
@@ -48,7 +48,7 @@ def test_discover_videos_registers_new_videos(
     monkeypatch.setattr("src.config.settings.youtube_channel_ids", ["channel1"])
 
     # Act
-    count = discover.discover_videos(client=mock_client)
+    count = DiscoverPipeline(client=mock_client).discover_videos()
 
     # Assert
     assert count == 1
@@ -89,7 +89,7 @@ def test_discover_videos_skips_existing_videos(
     monkeypatch.setattr("src.config.settings.youtube_channel_ids", ["channel1"])
 
     # Act
-    count = discover.discover_videos(client=mock_client)
+    count = DiscoverPipeline(client=mock_client).discover_videos()
 
     # Assert
     assert count == 0

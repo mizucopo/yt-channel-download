@@ -7,7 +7,7 @@ import pytest
 
 from src import db
 from src.models.stream import Stream
-from src.pipeline import thumbs
+from src.pipeline.thumbs import ThumbsPipeline
 
 
 @pytest.fixture(autouse=True)
@@ -52,7 +52,7 @@ def test_extract_thumbnails_updates_status_on_success() -> None:
 
     with patch("subprocess.run", return_value=mock_result):
         # Act
-        success = thumbs.extract_thumbnails("video1", "/path/to/video.mp4")
+        success = ThumbsPipeline().extract_thumbnails("video1", "/path/to/video.mp4")
 
     # Assert
     assert success is True
@@ -90,7 +90,7 @@ def test_extract_thumbnails_reverts_status_on_failure() -> None:
 
     with patch("subprocess.run", return_value=mock_result):
         # Act
-        success = thumbs.extract_thumbnails("video1", "/path/to/video.mp4")
+        success = ThumbsPipeline().extract_thumbnails("video1", "/path/to/video.mp4")
 
     # Assert
     assert success is False

@@ -6,9 +6,12 @@ Clickベースのコマンドラインインターフェースを提供する。
 import click
 
 from src import db
-from src.pipeline import discover, recover, thumbs, upload
 from src.pipeline.cleanup import CleanupPipeline
+from src.pipeline.discover import DiscoverPipeline
 from src.pipeline.download import DownloadPipeline
+from src.pipeline.recover import RecoverPipeline
+from src.pipeline.thumbs import ThumbsPipeline
+from src.pipeline.upload import UploadPipeline
 from src.utils.locking import acquire_lock
 from src.utils.logging import setup_logging
 from src.utils.paths import ensure_directories
@@ -43,7 +46,7 @@ def run() -> None:
         click.echo("Starting full pipeline...")
 
         click.echo("Discovering videos...")
-        discovered = discover.discover_videos()
+        discovered = DiscoverPipeline().discover_videos()
         click.echo(f"  Discovered: {discovered} new videos")
 
         click.echo("Downloading videos...")
@@ -51,11 +54,11 @@ def run() -> None:
         click.echo(f"  Downloaded: {downloaded} videos")
 
         click.echo("Extracting thumbnails...")
-        thumbnailed = thumbs.extract_all()
+        thumbnailed = ThumbsPipeline().extract_all()
         click.echo(f"  Extracted: {thumbnailed} videos")
 
         click.echo("Uploading to Google Drive...")
-        uploaded = upload.upload_all()
+        uploaded = UploadPipeline().upload_all()
         click.echo(f"  Uploaded: {uploaded} videos")
 
         click.echo("Cleaning up local files...")
@@ -69,7 +72,7 @@ def run() -> None:
 def discover_cmd() -> None:
     """新しいライブアーカイブを検出する."""
     with acquire_lock():
-        count = discover.discover_videos()
+        count = DiscoverPipeline().discover_videos()
         click.echo(f"Discovered {count} new videos.")
 
 
@@ -85,7 +88,7 @@ def download_cmd() -> None:
 def thumbs_cmd() -> None:
     """サムネイルを抽出する."""
     with acquire_lock():
-        count = thumbs.extract_all()
+        count = ThumbsPipeline().extract_all()
         click.echo(f"Extracted thumbnails from {count} videos.")
 
 
@@ -93,7 +96,7 @@ def thumbs_cmd() -> None:
 def upload_cmd() -> None:
     """Google Driveへアップロードする."""
     with acquire_lock():
-        count = upload.upload_all()
+        count = UploadPipeline().upload_all()
         click.echo(f"Uploaded {count} videos.")
 
 
@@ -109,7 +112,7 @@ def cleanup_cmd() -> None:
 def recover_cmd() -> None:
     """中断されたストリームを回復する."""
     with acquire_lock():
-        count = recover.recover_streams()
+        count = RecoverPipeline().recover_streams()
         click.echo(f"Recovered {count} streams.")
 
 
@@ -142,7 +145,7 @@ def upload_one(video_id: str) -> None:
         raise SystemExit(1)
 
     with acquire_lock():
-        success = upload.upload_video(video_id, stream.local_path)
+        success = UploadPipeline().upload_video(video_id, stream.local_path)
         if success:
             click.echo(f"Uploaded {video_id}")
         else:

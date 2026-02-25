@@ -13,36 +13,43 @@ from src.youtube_client import YouTubeClient
 logger = logging.getLogger(__name__)
 
 
-def discover_videos(client: YouTubeClient | None = None) -> int:
-    """新しいライブアーカイブを検出して登録する.
+class DiscoverPipeline:
+    """動画検出パイプライン."""
 
-    Args:
-        client: YouTube APIクライアント（Noneの場合は新規作成）
+    def __init__(self, client: YouTubeClient | None = None) -> None:
+        """パイプラインを初期化する.
 
-    Returns:
-        新規登録された動画数
-    """
-    if client is None:
-        client = YouTubeClient(settings.youtube_api_key)
+        Args:
+            client: YouTube APIクライアント（Noneの場合は新規作成）
+        """
+        self._client = client or YouTubeClient(settings.youtube_api_key)
 
-    count = 0
-    for channel_id in settings.youtube_channel_ids:
-        logger.info("Discovering videos for channel: %s", channel_id)
-        videos = client.get_live_archives(channel_id)
+    def discover_videos(self) -> int:
+        """新しいライブアーカイブを検出して登録する.
 
-        for video in videos:
-            existing = db.get_stream(video.video_id)
-            if existing is not None:
-                continue
+        Returns:
+            新規登録された動画数
+        """
+        count = 0
+        for channel_id in settings.youtube_channel_ids:
+            logger.info("Discovering videos for channel: %s", channel_id)
+            videos = self._client.get_live_archives(channel_id)
 
-            stream = Stream(
-                video_id=video.video_id,
-                status="discovered",
-                title=video.title,
-                published_at=video.published_at.isoformat(),
-            )
-            db.insert_stream(stream)
-            logger.info("Discovered new video: %s - %s", video.video_id, video.title)
-            count += 1
+            for video in videos:
+                existing = db.get_stream(video.video_id)
+                if existing is not None:
+                    continue
 
-    return count
+                stream = Stream(
+                    video_id=video.video_id,
+                    status="discovered",
+                    title=video.title,
+                    published_at=video.published_at.isoformat(),
+                )
+                db.insert_stream(stream)
+                logger.info(
+                    "Discovered new video: %s - %s", video.video_id, video.title
+                )
+                count += 1
+
+        return count

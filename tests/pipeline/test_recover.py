@@ -6,7 +6,7 @@ import pytest
 
 from src import db
 from src.models.stream import Stream
-from src.pipeline import recover
+from src.pipeline.recover import RecoverPipeline
 
 
 @pytest.fixture(autouse=True)
@@ -36,7 +36,7 @@ def test_recover_streams_reverts_downloading_to_discovered() -> None:
     )
 
     # Act
-    count = recover.recover_streams()
+    count = RecoverPipeline().recover_streams()
 
     # Assert
     assert count == 1
@@ -61,7 +61,7 @@ def test_recover_streams_reverts_uploading_to_thumbs_done() -> None:
     db.insert_stream(Stream(video_id="video1", status="uploading", title="Test Video"))
 
     # Act
-    count = recover.recover_streams()
+    count = RecoverPipeline().recover_streams()
 
     # Assert
     assert count == 1
@@ -100,7 +100,7 @@ def test_recover_streams_respects_max_retries(
     monkeypatch.setattr("src.config.settings.max_retries", 3)
 
     # Act
-    count = recover.recover_streams()
+    count = RecoverPipeline().recover_streams()
 
     # Assert
     assert count == 0

@@ -7,7 +7,7 @@ import pytest
 
 from src import db
 from src.models.stream import Stream
-from src.pipeline import upload
+from src.pipeline.upload import UploadPipeline
 
 
 @pytest.fixture(autouse=True)
@@ -58,7 +58,7 @@ def test_upload_video_updates_status_on_success(tmp_path: Path) -> None:
 
     with patch("src.pipeline.upload.GoogleDriveProvider", return_value=mock_provider):
         # Act
-        success = upload.upload_video("video1", str(video_path))
+        success = UploadPipeline().upload_video("video1", str(video_path))
 
     # Assert
     assert success is True
@@ -100,7 +100,7 @@ def test_upload_video_reverts_status_on_failure(tmp_path: Path) -> None:
 
     with patch("src.pipeline.upload.GoogleDriveProvider", return_value=mock_provider):
         # Act
-        success = upload.upload_video("video1", str(video_path))
+        success = UploadPipeline().upload_video("video1", str(video_path))
 
     # Assert
     assert success is False
