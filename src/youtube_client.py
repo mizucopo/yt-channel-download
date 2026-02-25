@@ -8,24 +8,25 @@ from typing import Any, cast
 
 import requests
 
+from src.google_oauth_client import GoogleOAuthClient
 from src.models.video_info import VideoInfo
 
 
 class YouTubeClient:
     """YouTube Data API v3クライアント.
 
-    YouTube APIを使用してライブアーカイブ情報を取得する。
+    OAuth認証を使用してYouTube APIにアクセスし、ライブアーカイブ情報を取得する。
     """
 
     BASE_URL = "https://www.googleapis.com/youtube/v3"
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, oauth_client: GoogleOAuthClient) -> None:
         """クライアントを初期化する.
 
         Args:
-            api_key: YouTube Data API キー
+            oauth_client: Google OAuth認証クライアント
         """
-        self.api_key = api_key
+        self._oauth_client = oauth_client
 
     def _make_request(
         self, endpoint: str, params: dict[str, str]
@@ -39,9 +40,9 @@ class YouTubeClient:
         Returns:
             レスポンスJSON（エラー時はNone）
         """
-        params["key"] = self.api_key
+        headers = self._oauth_client.get_headers()
         response = requests.get(
-            f"{self.BASE_URL}/{endpoint}", params=params, timeout=30
+            f"{self.BASE_URL}/{endpoint}", params=params, headers=headers, timeout=30
         )
 
         if response.status_code != 200:

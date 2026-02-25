@@ -16,7 +16,6 @@ class Settings(BaseModel):
     model_config = ConfigDict(frozen=False)
 
     # YouTube API設定
-    youtube_api_key: str
     youtube_channel_ids: list[str]
 
     # パス設定
@@ -24,9 +23,9 @@ class Settings(BaseModel):
     download_dir: str
     thumbnail_dir: str
 
-    # Google Drive設定
-    gdrive_oauth_client_id: str
-    gdrive_refresh_token: str
+    # Google OAuth設定（YouTube API, Google Drive API共通）
+    google_oauth_client_id: str
+    google_refresh_token: str
     gdrive_root_folder_id: str
 
     # ダウンロード設定
@@ -61,15 +60,14 @@ class Settings(BaseModel):
             ValidationError: 必須設定が不足している場合
         """
         instance = cls(
-            youtube_api_key=config("YOUTUBE_API_KEY", default=""),
             youtube_channel_ids=cls._parse_channel_ids(
                 config("YOUTUBE_CHANNEL_IDS", default="")
             ),
             database_path=config("DATABASE_PATH", default="data/streams.db"),
             download_dir=config("DOWNLOAD_DIR", default="data/downloads"),
             thumbnail_dir=config("THUMBNAIL_DIR", default="data/thumbnails"),
-            gdrive_oauth_client_id=config("GDRIVE_OAUTH_CLIENT_ID", default=""),
-            gdrive_refresh_token=config("GDRIVE_REFRESH_TOKEN", default=""),
+            google_oauth_client_id=config("GOOGLE_OAUTH_CLIENT_ID", default=""),
+            google_refresh_token=config("GOOGLE_REFRESH_TOKEN", default=""),
             gdrive_root_folder_id=config("GDRIVE_ROOT_FOLDER_ID", default=""),
             thumbnail_interval=config("THUMBNAIL_INTERVAL", default=60, cast=int),
             max_retries=config("MAX_RETRIES", default=3, cast=int),
@@ -78,14 +76,12 @@ class Settings(BaseModel):
 
         # 必須設定の検証
         missing: list[str] = []
-        if not instance.youtube_api_key:
-            missing.append("YOUTUBE_API_KEY")
         if not instance.youtube_channel_ids:
             missing.append("YOUTUBE_CHANNEL_IDS")
-        if not instance.gdrive_oauth_client_id:
-            missing.append("GDRIVE_OAUTH_CLIENT_ID")
-        if not instance.gdrive_refresh_token:
-            missing.append("GDRIVE_REFRESH_TOKEN")
+        if not instance.google_oauth_client_id:
+            missing.append("GOOGLE_OAUTH_CLIENT_ID")
+        if not instance.google_refresh_token:
+            missing.append("GOOGLE_REFRESH_TOKEN")
         if not instance.gdrive_root_folder_id:
             missing.append("GDRIVE_ROOT_FOLDER_ID")
 

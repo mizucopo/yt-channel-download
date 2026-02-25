@@ -11,6 +11,7 @@ from pathlib import Path
 import click
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
+from src.google_oauth_client import GoogleOAuthClient
 from src.models.stream_status import StreamStatus
 from src.pipeline.cleanup import CleanupPipeline
 from src.pipeline.discover import DiscoverPipeline
@@ -71,16 +72,21 @@ class Main:
         """ロックマネージャを取得する."""
         return LockManager(lock_dir=self._path_manager.download_dir)
 
+    def get_oauth_client(self) -> GoogleOAuthClient:
+        """Google OAuth認証クライアントを取得する."""
+        return GoogleOAuthClient(
+            oauth_client_id=self._settings.google_oauth_client_id,
+            refresh_token=self._settings.google_refresh_token,
+        )
+
     def get_youtube_client(self) -> YouTubeClient:
         """YouTubeクライアントを取得する."""
-        return YouTubeClient(self._settings.youtube_api_key)
+        return YouTubeClient(oauth_client=self.get_oauth_client())
 
     def get_gdrive_provider(self) -> GoogleDriveProvider:
         """Google Driveプロバイダーを取得する."""
-        return GoogleDriveProvider(
-            oauth_client_id=self._settings.gdrive_oauth_client_id,
-            refresh_token=self._settings.gdrive_refresh_token,
-        )
+        access_token = self.get_oauth_client().get_access_token()
+        return GoogleDriveProvider(access_token=access_token)
 
     def initialize(self, verbose: bool) -> None:
         """アプリケーションを初期化する.
