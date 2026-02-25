@@ -48,6 +48,3 @@ class Settings(BaseModel):
         if not value:
             return []
         return [v.strip() for v in value.split(",") if v.strip()]
-
-
-settings = Settings()

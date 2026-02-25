@@ -16,12 +16,23 @@ from src.pipeline.download import DownloadPipeline
 from src.pipeline.recover import RecoverPipeline
 from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
-from src.settings import settings
+from src.settings import Settings
 from src.stream_repository import StreamRepository
 from src.utils.locking import acquire_lock
 from src.utils.logging import setup_logging
 from src.utils.paths import ensure_directories
 from src.youtube_client import YouTubeClient
+
+
+def _get_settings() -> Settings:
+    """設定を取得する."""
+    return Settings()
+
+
+def _get_repository() -> StreamRepository:
+    """ストリームリポジトリを取得する."""
+    settings = _get_settings()
+    return StreamRepository(Path(settings.database_path))
 
 
 @click.group()
@@ -36,6 +47,7 @@ def cli(verbose: bool) -> None:
     setup_logging(level)
 
     # 初期化
+    settings = _get_settings()
     ensure_directories(
         settings.download_dir,
         settings.thumbnail_dir,
@@ -46,11 +58,6 @@ def cli(verbose: bool) -> None:
     repository.init_db()
 
 
-def _get_repository() -> StreamRepository:
-    """ストリームリポジトリを取得する."""
-    return StreamRepository(Path(settings.database_path))
-
-
 @cli.command()
 def run() -> None:
     """全パイプラインを実行する.
@@ -58,6 +65,8 @@ def run() -> None:
     検出→ダウンロード→サムネイル抽出→アップロード→クリーンアップの
     全ステップを順番に実行する。
     """
+    settings = _get_settings()
+
     with acquire_lock():
         click.echo("Starting full pipeline...")
 
@@ -120,6 +129,8 @@ def run() -> None:
 @cli.command()
 def discover_cmd() -> None:
     """新しいライブアーカイブを検出する."""
+    settings = _get_settings()
+
     with acquire_lock():
         repository = _get_repository()
         youtube_client = YouTubeClient(settings.youtube_api_key)
@@ -134,6 +145,8 @@ def discover_cmd() -> None:
 @cli.command()
 def download_cmd() -> None:
     """待機中の動画をダウンロードする."""
+    settings = _get_settings()
+
     with acquire_lock():
         repository = _get_repository()
         count = DownloadPipeline(
@@ -147,6 +160,8 @@ def download_cmd() -> None:
 @cli.command()
 def thumbs_cmd() -> None:
     """サムネイルを抽出する."""
+    settings = _get_settings()
+
     with acquire_lock():
         repository = _get_repository()
         count = ThumbsPipeline(
@@ -161,6 +176,8 @@ def thumbs_cmd() -> None:
 @cli.command()
 def upload_cmd() -> None:
     """Google Driveへアップロードする."""
+    settings = _get_settings()
+
     with acquire_lock():
         repository = _get_repository()
         gdrive_provider = GoogleDriveProvider(
@@ -179,6 +196,8 @@ def upload_cmd() -> None:
 @cli.command()
 def cleanup_cmd() -> None:
     """ローカルファイルを削除する."""
+    settings = _get_settings()
+
     with acquire_lock():
         repository = _get_repository()
         count = CleanupPipeline(
@@ -193,6 +212,8 @@ def cleanup_cmd() -> None:
 @cli.command()
 def recover_cmd() -> None:
     """中断されたストリームを回復する."""
+    settings = _get_settings()
+
     with acquire_lock():
         repository = _get_repository()
         count = RecoverPipeline(
@@ -209,6 +230,8 @@ def download_one(video_id: str) -> None:
 
     VIDEO_ID: YouTube動画ID
     """
+    settings = _get_settings()
+
     with acquire_lock():
         repository = _get_repository()
         success = DownloadPipeline(
@@ -230,6 +253,7 @@ def upload_one(video_id: str) -> None:
 
     VIDEO_ID: YouTube動画ID
     """
+    settings = _get_settings()
     repository = _get_repository()
     stream = repository.get(video_id)
     if stream is None or stream.local_path is None:

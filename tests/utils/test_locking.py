@@ -1,15 +1,14 @@
 """ファイルロックユーティリティのテスト."""
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from src.utils.locking import acquire_lock
 
 
-def test_acquire_lock_prevents_concurrent_access(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_acquire_lock_prevents_concurrent_access(tmp_path: Path) -> None:
     """acquire_lockが二重起動を防止すること.
 
     Arrange:
@@ -22,17 +21,16 @@ def test_acquire_lock_prevents_concurrent_access(
         RuntimeErrorが発生すること。
     """
     # Arrange
-    monkeypatch.setattr("src.settings.settings.download_dir", str(tmp_path))
+    with patch("src.utils.locking.Settings") as mock_settings:
+        mock_settings.return_value.download_dir = str(tmp_path)
 
-    # Act & Assert
-    with acquire_lock(), pytest.raises(RuntimeError, match="Another instance"):  # noqa: SIM117
-        with acquire_lock():
-            pass
+        # Act & Assert
+        with acquire_lock(), pytest.raises(RuntimeError, match="Another instance"):  # noqa: SIM117
+            with acquire_lock():
+                pass
 
 
-def test_acquire_lock_releases_on_exit(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_acquire_lock_releases_on_exit(tmp_path: Path) -> None:
     """acquire_lockが終了時にロックを解放すること.
 
     Arrange:
@@ -45,12 +43,13 @@ def test_acquire_lock_releases_on_exit(
         ロックが正常に取得できること。
     """
     # Arrange
-    monkeypatch.setattr("src.settings.settings.download_dir", str(tmp_path))
+    with patch("src.utils.locking.Settings") as mock_settings:
+        mock_settings.return_value.download_dir = str(tmp_path)
 
-    # Act
-    with acquire_lock():
-        pass
+        # Act
+        with acquire_lock():
+            pass
 
-    # Assert - should not raise
-    with acquire_lock():
-        pass
+        # Assert - should not raise
+        with acquire_lock():
+            pass

@@ -9,7 +9,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from pathlib import Path
 
-from src.settings import settings
+from src.settings import Settings
 
 
 @contextmanager
@@ -25,6 +25,7 @@ def acquire_lock() -> Iterator[None]:
     Raises:
         RuntimeError: 既にロックされている場合
     """
+    settings = Settings()
     lock_path = Path(settings.download_dir) / ".app.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
 
