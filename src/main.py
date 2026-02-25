@@ -311,5 +311,19 @@ def status() -> None:
         click.echo(f"  {status.value}: {len(streams)}")
 
 
+@cli.command()
+def unlock() -> None:
+    """ロックファイルを削除する."""
+    path_manager = _get_path_manager()
+    lock_manager = LockManager(lock_dir=path_manager.download_dir)
+
+    if not lock_manager.is_locked():
+        click.echo("Lock file does not exist.")
+        return
+
+    lock_manager.release()
+    click.echo(f"Removed lock file: {lock_manager.lock_path}")
+
+
 if __name__ == "__main__":
     cli()

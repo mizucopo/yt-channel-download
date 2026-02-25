@@ -59,15 +59,18 @@ uv sync
 python -m src.main run
 
 # 個別ステージの実行
-python -m src.main discover   # 動画検出のみ
-python -m src.main download   # ダウンロードのみ
-python -m src.main thumbs     # サムネイル抽出のみ
-python -m src.main upload     # アップロードのみ
-python -m src.main cleanup    # クリーンアップのみ
-python -m src.main recover    # 中断回復
+python -m src.main discover-cmd   # 動画検出のみ
+python -m src.main download-cmd  # ダウンロードのみ
+python -m src.main thumbs-cmd    # サムネイル抽出のみ
+python -m src.main upload-cmd    # アップロードのみ
+python -m src.main cleanup-cmd   # クリーンアップのみ
+python -m src.main recover-cmd   # 中断回復
 
 # ステータス確認
 python -m src.main status
+
+# ロックファイル削除
+python -m src.main unlock
 
 # 個別動画の操作
 python -m src.main download-one VIDEO_ID

@@ -22,6 +22,11 @@ class LockManager:
         """
         self._lock_path = lock_dir / lock_filename
 
+    @property
+    def lock_path(self) -> Path:
+        """ロックファイルのパスを取得する."""
+        return self._lock_path
+
     @contextmanager
     def acquire(self) -> Iterator[None]:
         """アプリケーションロックを取得する.
@@ -47,3 +52,26 @@ class LockManager:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
                 with suppress(OSError):
                     os.unlink(self._lock_path)
+
+    def release(self) -> bool:
+        """ロックファイルを削除する.
+
+        ロックファイルが存在する場合に削除する。
+        このメソッドは他のプロセスがロックを保持しているかどうかにかかわらず、
+        ファイルを削除する。
+
+        Returns:
+            ロックファイルが削除された場合はTrue
+        """
+        with suppress(OSError):
+            self._lock_path.unlink()
+            return True
+        return False
+
+    def is_locked(self) -> bool:
+        """ロックファイルが存在するかどうかを確認する.
+
+        Returns:
+            ロックファイルが存在する場合はTrue
+        """
+        return self._lock_path.exists()
