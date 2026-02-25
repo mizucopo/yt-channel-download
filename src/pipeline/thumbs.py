@@ -9,7 +9,6 @@ from pathlib import Path
 
 from src.models.stream_status import StreamStatus
 from src.stream_repository import StreamRepository
-from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +36,19 @@ class ThumbsPipeline:
         self._thumbnail_dir = thumbnail_dir
         self._repository = repository
 
+    def _get_thumbnail_dir(self, video_id: str) -> Path:
+        """サムネイル保存ディレクトリを取得する.
+
+        Args:
+            video_id: YouTube動画ID
+
+        Returns:
+            サムネイル保存先のディレクトリパス
+        """
+        thumb_dir = self._thumbnail_dir / video_id
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        return thumb_dir
+
     def extract_thumbnails(self, video_id: str, local_path: str) -> bool:
         """動画からサムネイルを抽出する.
 
@@ -61,8 +73,7 @@ class ThumbsPipeline:
 
         try:
             # サムネイルディレクトリを作成
-            thumb_dir = get_thumbnail_dir(video_id, self._thumbnail_dir)
-            thumb_dir.mkdir(parents=True, exist_ok=True)
+            thumb_dir = self._get_thumbnail_dir(video_id)
 
             logger.info(
                 "Extracting thumbnails from %s at %d second intervals",

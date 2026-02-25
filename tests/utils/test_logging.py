@@ -1,28 +1,28 @@
 """ログ設定ユーティリティのテスト."""
 
-import io
 import logging
+from io import StringIO
 
-from src.utils.logging import get_logger, setup_logging
+from src.utils.logging import LoggingConfig
 
 
 def test_setup_logging_configures_root_logger() -> None:
-    """setup_loggingがルートロガーを設定すること.
+    """LoggingConfigがルートロガーを設定すること.
 
     Arrange:
-        StringIOをストリームとして準備する。
+        出力先としてStringIOを準備する。
 
     Act:
-        setup_logging()を呼び出す。
+        LoggingConfigを初期化する。
 
     Assert:
         ルートロガーにハンドラーが追加されていること。
     """
     # Arrange
-    stream = io.StringIO()
+    stream = StringIO()
 
     # Act
-    setup_logging(logging.DEBUG, stream)
+    LoggingConfig(level=logging.DEBUG, stream=stream)
 
     # Assert
     root_logger = logging.getLogger()
@@ -45,7 +45,7 @@ def test_get_logger_returns_logger_with_name() -> None:
     name = "test.module"
 
     # Act
-    logger = get_logger(name)
+    logger = LoggingConfig.get_logger(name)
 
     # Assert
     assert logger.name == name

@@ -9,7 +9,6 @@ from pathlib import Path
 
 from src.models.stream_status import StreamStatus
 from src.stream_repository import StreamRepository
-from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +35,17 @@ class CleanupPipeline:
         self._download_dir = download_dir
         self._thumbnail_dir = thumbnail_dir
         self._repository = repository
+
+    def _get_thumbnail_dir(self, video_id: str) -> Path:
+        """サムネイル保存ディレクトリを取得する.
+
+        Args:
+            video_id: YouTube動画ID
+
+        Returns:
+            サムネイル保存先のディレクトリパス
+        """
+        return self._thumbnail_dir / video_id
 
     def cleanup_video(self, video_id: str, local_path: str) -> bool:
         """動画とサムネイルをローカルから削除する.
@@ -65,7 +75,7 @@ class CleanupPipeline:
                 logger.info("Deleted video file: %s", local_path)
 
             # サムネイルディレクトリを削除
-            thumb_dir = get_thumbnail_dir(video_id, self._thumbnail_dir)
+            thumb_dir = self._get_thumbnail_dir(video_id)
             if thumb_dir.exists():
                 shutil.rmtree(thumb_dir)
                 logger.info("Deleted thumbnail directory: %s", thumb_dir)

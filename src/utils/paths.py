@@ -6,55 +6,80 @@
 from pathlib import Path
 
 
-def get_download_path(video_id: str, download_dir: Path) -> Path:
-    """動画のダウンロードパスを取得する.
+class PathManager:
+    """パス管理クラス."""
 
-    Args:
-        video_id: YouTube動画ID
-        download_dir: ダウンロードディレクトリ
+    def __init__(
+        self,
+        download_dir: Path,
+        thumbnail_dir: Path,
+        database_path: Path,
+    ) -> None:
+        """パスマネージャを初期化する.
 
-    Returns:
-        ダウンロード先のパス
-    """
-    download_dir.mkdir(parents=True, exist_ok=True)
-    return download_dir / f"{video_id}.mp4"
+        Args:
+            download_dir: ダウンロードディレクトリ
+            thumbnail_dir: サムネイルディレクトリ
+            database_path: データベースファイルパス
+        """
+        self._download_dir = download_dir
+        self._thumbnail_dir = thumbnail_dir
+        self._database_path = database_path
 
+    @property
+    def download_dir(self) -> Path:
+        """ダウンロードディレクトリを取得する."""
+        return self._download_dir
 
-def get_thumbnail_dir(video_id: str, thumbnail_dir: Path) -> Path:
-    """サムネイル保存ディレクトリを取得する.
+    @property
+    def thumbnail_dir(self) -> Path:
+        """サムネイルディレクトリを取得する."""
+        return self._thumbnail_dir
 
-    Args:
-        video_id: YouTube動画ID
-        thumbnail_dir: サムネイルベースディレクトリ
+    @property
+    def database_path(self) -> Path:
+        """データベースファイルパスを取得する."""
+        return self._database_path
 
-    Returns:
-        サムネイル保存先のディレクトリパス
-    """
-    thumb_dir = thumbnail_dir / video_id
-    thumb_dir.mkdir(parents=True, exist_ok=True)
-    return thumb_dir
+    def get_download_path(self, video_id: str) -> Path:
+        """動画のダウンロードパスを取得する.
 
+        Args:
+            video_id: YouTube動画ID
 
-def get_thumbnail_path(video_id: str, index: int, thumbnail_dir: Path) -> Path:
-    """サムネイルファイルのパスを取得する.
+        Returns:
+            ダウンロード先のパス
+        """
+        self._download_dir.mkdir(parents=True, exist_ok=True)
+        return self._download_dir / f"{video_id}.mp4"
 
-    Args:
-        video_id: YouTube動画ID
-        index: サムネイルのインデックス
-        thumbnail_dir: サムネイルベースディレクトリ
+    def get_thumbnail_dir(self, video_id: str) -> Path:
+        """サムネイル保存ディレクトリを取得する.
 
-    Returns:
-        サムネイルファイルのパス
-    """
-    return get_thumbnail_dir(video_id, thumbnail_dir) / f"thumb_{index:04d}.jpg"
+        Args:
+            video_id: YouTube動画ID
 
+        Returns:
+            サムネイル保存先のディレクトリパス
+        """
+        thumb_dir = self._thumbnail_dir / video_id
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        return thumb_dir
 
-def ensure_directories(
-    download_dir: str,
-    thumbnail_dir: str,
-    database_path: str,
-) -> None:
-    """必要なディレクトリを作成する."""
-    Path(download_dir).mkdir(parents=True, exist_ok=True)
-    Path(thumbnail_dir).mkdir(parents=True, exist_ok=True)
-    Path(database_path).parent.mkdir(parents=True, exist_ok=True)
+    def get_thumbnail_path(self, video_id: str, index: int) -> Path:
+        """サムネイルファイルのパスを取得する.
+
+        Args:
+            video_id: YouTube動画ID
+            index: サムネイルのインデックス
+
+        Returns:
+            サムネイルファイルのパス
+        """
+        return self.get_thumbnail_dir(video_id) / f"thumb_{index:04d}.jpg"
+
+    def ensure_directories(self) -> None:
+        """必要なディレクトリを作成する."""
+        self._download_dir.mkdir(parents=True, exist_ok=True)
+        self._thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        self._database_path.parent.mkdir(parents=True, exist_ok=True)

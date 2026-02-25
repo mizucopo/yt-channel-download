@@ -9,33 +9,41 @@ from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from pathlib import Path
 
-from src.settings import Settings
 
+class LockManager:
+    """ファイルロック管理クラス."""
 
-@contextmanager
-def acquire_lock() -> Iterator[None]:
-    """アプリケーションロックを取得する.
+    def __init__(self, lock_dir: Path, lock_filename: str = ".app.lock") -> None:
+        """ロックマネージャを初期化する.
 
-    ロックファイルを作成し、排他ロックを取得する。
-    既にロックされている場合はRuntimeErrorを発生させる。
+        Args:
+            lock_dir: ロックファイルを配置するディレクトリ
+            lock_filename: ロックファイル名
+        """
+        self._lock_path = lock_dir / lock_filename
 
-    Yields:
-        None
+    @contextmanager
+    def acquire(self) -> Iterator[None]:
+        """アプリケーションロックを取得する.
 
-    Raises:
-        RuntimeError: 既にロックされている場合
-    """
-    settings = Settings()
-    lock_path = Path(settings.download_dir) / ".app.lock"
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
+        ロックファイルを作成し、排他ロックを取得する。
+        既にロックされている場合はRuntimeErrorを発生させる。
 
-    with open(lock_path, "w") as lock_file:
-        try:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            yield
-        except BlockingIOError as e:
-            raise RuntimeError("Another instance is already running") from e
-        finally:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-            with suppress(OSError):
-                os.unlink(lock_path)
+        Yields:
+            None
+
+        Raises:
+            RuntimeError: 既にロックされている場合
+        """
+        self._lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(self._lock_path, "w") as lock_file:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                yield
+            except BlockingIOError as e:
+                raise RuntimeError("Another instance is already running") from e
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                with suppress(OSError):
+                    os.unlink(self._lock_path)

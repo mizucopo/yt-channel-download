@@ -10,7 +10,6 @@ from mizu_common.google_drive_provider import GoogleDriveProvider
 
 from src.models.stream_status import StreamStatus
 from src.stream_repository import StreamRepository
-from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +39,17 @@ class UploadPipeline:
         self._gdrive_root_folder_id = gdrive_root_folder_id
         self._thumbnail_dir = thumbnail_dir
         self._repository = repository
+
+    def _get_thumbnail_dir(self, video_id: str) -> Path:
+        """サムネイル保存ディレクトリを取得する.
+
+        Args:
+            video_id: YouTube動画ID
+
+        Returns:
+            サムネイル保存先のディレクトリパス
+        """
+        return self._thumbnail_dir / video_id
 
     def upload_video(self, video_id: str, local_path: str) -> bool:
         """動画とサムネイルをGoogle Driveにアップロードする.
@@ -75,7 +85,7 @@ class UploadPipeline:
             )
 
             # サムネイルフォルダをアップロード
-            thumb_dir = get_thumbnail_dir(video_id, self._thumbnail_dir)
+            thumb_dir = self._get_thumbnail_dir(video_id)
             if thumb_dir.exists():
                 logger.info("Uploading thumbnails: %s", video_id)
                 self._gdrive_provider.upload_directory(
