@@ -12,7 +12,7 @@ from src.pipeline.discover import DiscoverPipeline
 from src.pipeline.download import DownloadPipeline
 from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
-from src.repository import StreamRepository
+from src.stream_repository import StreamRepository
 from src.youtube_client import YouTubeClient
 
 

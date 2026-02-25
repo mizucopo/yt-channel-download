@@ -16,7 +16,7 @@ from src.pipeline.download import DownloadPipeline
 from src.pipeline.recover import RecoverPipeline
 from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
-from src.repository import StreamRepository
+from src.stream_repository import StreamRepository
 from src.utils.locking import acquire_lock
 from src.utils.logging import setup_logging
 from src.utils.paths import ensure_directories

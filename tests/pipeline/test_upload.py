@@ -7,7 +7,7 @@ import pytest
 
 from src.models.stream import Stream
 from src.pipeline.upload import UploadPipeline
-from src.repository import StreamRepository
+from src.stream_repository import StreamRepository
 
 
 @pytest.fixture

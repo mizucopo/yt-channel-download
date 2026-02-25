@@ -7,7 +7,7 @@ import pytest
 
 from src.models.stream import Stream
 from src.pipeline.thumbs import ThumbsPipeline
-from src.repository import StreamRepository
+from src.stream_repository import StreamRepository
 
 
 @pytest.fixture

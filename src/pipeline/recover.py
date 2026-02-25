@@ -67,4 +67,4 @@ class RecoverPipeline:
         return count
 
 
-from src.repository import StreamRepository  # noqa: E402
+from src.stream_repository import StreamRepository  # noqa: E402

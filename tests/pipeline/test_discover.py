@@ -9,7 +9,7 @@ import pytest
 from src.models.stream import Stream
 from src.models.video_info import VideoInfo
 from src.pipeline.discover import DiscoverPipeline
-from src.repository import StreamRepository
+from src.stream_repository import StreamRepository
 
 
 @pytest.fixture
