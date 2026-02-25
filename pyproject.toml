@@ -9,6 +9,10 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "mizu-common-py",
+    "yt-dlp>=2024.0.0",
+    "click>=8.0.0",
+    "python-decouple>=3.8",
+    "pydantic>=2.0.0",
 ]
 
 [dependency-groups]
