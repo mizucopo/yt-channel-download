@@ -6,28 +6,29 @@ from unittest.mock import Mock
 
 import pytest
 
-from src import db
 from src.models.stream import Stream
 from src.models.video_info import VideoInfo
 from src.pipeline.discover import DiscoverPipeline
+from src.repository import StreamRepository
 
 
-@pytest.fixture(autouse=True)
-def setup_test_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """テスト用データベースをセットアップする."""
-    test_db_path = str(tmp_path / "test.db")
-    monkeypatch.setattr("src.config.settings.database_path", test_db_path)
-    db.init_db()
+@pytest.fixture
+def repository(tmp_path: Path) -> StreamRepository:
+    """テスト用リポジトリを作成する."""
+    db_path = tmp_path / "test.db"
+    repo = StreamRepository(db_path)
+    repo.init_db()
+    return repo
 
 
-def test_discover_videos_registers_new_videos() -> None:
-    """discover_videosが新しい動画を登録すること.
+def test_discover_all_registers_new_videos(repository: StreamRepository) -> None:
+    """discover_allが新しい動画を登録すること.
 
     Arrange:
         YouTube APIクライアントのモックを準備する。
 
     Act:
-        discover_videos()を呼び出す。
+        discover_all()を呼び出す。
 
     Assert:
         新しい動画がデータベースに登録されていること。
@@ -47,30 +48,31 @@ def test_discover_videos_registers_new_videos() -> None:
     count = DiscoverPipeline(
         client=mock_client,
         channel_ids=["channel1"],
+        repository=repository,
     ).discover_all()
 
     # Assert
     assert count == 1
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.title == "Test Video 1"
 
 
-def test_discover_videos_skips_existing_videos() -> None:
-    """discover_videosが既存の動画をスキップすること.
+def test_discover_all_skips_existing_videos(repository: StreamRepository) -> None:
+    """discover_allが既存の動画をスキップすること.
 
     Arrange:
         既存の動画をデータベースに登録する。
         YouTube APIクライアントのモックを準備する。
 
     Act:
-        discover_videos()を呼び出す。
+        discover_all()を呼び出す。
 
     Assert:
         新規登録数が0であること。
     """
     # Arrange
-    db.insert_stream(
+    repository.insert(
         Stream(video_id="video1", status="downloaded", title="Existing Video")
     )
 
@@ -88,6 +90,7 @@ def test_discover_videos_skips_existing_videos() -> None:
     count = DiscoverPipeline(
         client=mock_client,
         channel_ids=["channel1"],
+        repository=repository,
     ).discover_all()
 
     # Assert

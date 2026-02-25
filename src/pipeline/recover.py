@@ -5,21 +5,21 @@
 
 import logging
 
-from src import db
-
 logger = logging.getLogger(__name__)
 
 
 class RecoverPipeline:
     """中断状態回復パイプライン."""
 
-    def __init__(self, max_retries: int) -> None:
+    def __init__(self, max_retries: int, repository: "StreamRepository") -> None:
         """パイプラインを初期化する.
 
         Args:
             max_retries: 最大リトライ回数
+            repository: ストリームリポジトリ
         """
         self._max_retries = max_retries
+        self._repository = repository
 
     def recover_all(self) -> int:
         """中断されたストリームを回復する.
@@ -33,12 +33,12 @@ class RecoverPipeline:
         count = 0
 
         # downloading状態をdiscoveredに戻す
-        downloading_streams = db.get_streams_by_status("downloading")
+        downloading_streams = self._repository.get_by_status("downloading")
         for stream in downloading_streams:
             if stream.retry_count >= self._max_retries:
                 continue
 
-            updated = db.update_status(
+            updated = self._repository.update_status(
                 stream.video_id,
                 "discovered",
                 expected_old_status="downloading",
@@ -49,12 +49,12 @@ class RecoverPipeline:
                 count += 1
 
         # uploading状態をthumbs_doneに戻す
-        uploading_streams = db.get_streams_by_status("uploading")
+        uploading_streams = self._repository.get_by_status("uploading")
         for stream in uploading_streams:
             if stream.retry_count >= self._max_retries:
                 continue
 
-            updated = db.update_status(
+            updated = self._repository.update_status(
                 stream.video_id,
                 "thumbs_done",
                 expected_old_status="uploading",
@@ -65,3 +65,6 @@ class RecoverPipeline:
                 count += 1
 
         return count
+
+
+from src.repository import StreamRepository  # noqa: E402

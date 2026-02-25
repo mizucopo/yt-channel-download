@@ -7,7 +7,6 @@ import logging
 import shutil
 from pathlib import Path
 
-from src import db
 from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
@@ -21,6 +20,7 @@ class CleanupPipeline:
         max_retries: int,
         download_dir: Path,
         thumbnail_dir: Path,
+        repository: "StreamRepository",
     ) -> None:
         """パイプラインを初期化する.
 
@@ -28,10 +28,12 @@ class CleanupPipeline:
             max_retries: 最大リトライ回数
             download_dir: ダウンロードディレクトリ
             thumbnail_dir: サムネイルディレクトリ
+            repository: ストリームリポジトリ
         """
         self._max_retries = max_retries
         self._download_dir = download_dir
         self._thumbnail_dir = thumbnail_dir
+        self._repository = repository
 
     def cleanup_video(self, video_id: str, local_path: str) -> bool:
         """動画とサムネイルをローカルから削除する.
@@ -44,7 +46,7 @@ class CleanupPipeline:
             クリーンアップが成功した場合はTrue
         """
         # CAS更新: uploaded -> cleaned
-        updated = db.update_status(
+        updated = self._repository.update_status(
             video_id,
             "cleaned",
             expected_old_status="uploaded",
@@ -80,7 +82,7 @@ class CleanupPipeline:
         Returns:
             クリーンアップ対象があった場合はTrue
         """
-        stream = db.get_next_pending("uploaded", self._max_retries)
+        stream = self._repository.get_next_pending("uploaded", self._max_retries)
         if stream is None or stream.local_path is None:
             return False
 
@@ -98,3 +100,6 @@ class CleanupPipeline:
                 break
             count += 1
         return count
+
+
+from src.repository import StreamRepository  # noqa: E402

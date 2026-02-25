@@ -6,28 +6,27 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src import db
 from src.models.video_info import VideoInfo
 from src.pipeline.cleanup import CleanupPipeline
 from src.pipeline.discover import DiscoverPipeline
 from src.pipeline.download import DownloadPipeline
 from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
+from src.repository import StreamRepository
 from src.youtube_client import YouTubeClient
 
 
-@pytest.fixture(autouse=True)
-def setup_test_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """テスト環境をセットアップする."""
-    monkeypatch.setattr(
-        "src.config.settings.database_path", str(tmp_path / "streams.db")
-    )
-    monkeypatch.setattr("src.config.settings.max_retries", 3)
-    monkeypatch.setattr("src.config.settings.thumbnail_interval", 60)
-    db.init_db()
+@pytest.fixture
+def repository(tmp_path: Path) -> StreamRepository:
+    """テスト用リポジトリを作成する."""
+    db_path = tmp_path / "streams.db"
+    repo = StreamRepository(db_path)
+    repo.init_db()
+    return repo
 
 
 def test_full_pipeline_processes_video_from_discovery_to_cleanup(
+    repository: StreamRepository,
     tmp_path: Path,
 ) -> None:
     """フルパイプラインが動画を検出からクリーンアップまで処理すること.
@@ -71,10 +70,11 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
     count = DiscoverPipeline(
         client=mock_yt_client,
         channel_ids=["channel1"],
+        repository=repository,
     ).discover_all()
     assert count == 1
 
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "discovered"
 
@@ -87,10 +87,11 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
         success = DownloadPipeline(
             max_retries=3,
             download_dir=download_dir,
+            repository=repository,
         ).download_video("video1")
     assert success is True
 
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "downloaded"
 
@@ -100,10 +101,11 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
             max_retries=3,
             thumbnail_interval=60,
             thumbnail_dir=thumbnail_dir,
+            repository=repository,
         ).extract_thumbnails("video1", str(video_path))
     assert success is True
 
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "thumbs_done"
 
@@ -113,10 +115,11 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
         gdrive_provider=mock_gdrive_provider,
         gdrive_root_folder_id="folder_id",
         thumbnail_dir=thumbnail_dir,
+        repository=repository,
     ).upload_video("video1", str(video_path))
     assert success is True
 
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "uploaded"
 
@@ -125,9 +128,10 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
         max_retries=3,
         download_dir=download_dir,
         thumbnail_dir=thumbnail_dir,
+        repository=repository,
     ).cleanup_video("video1", str(video_path))
     assert success is True
 
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "cleaned"

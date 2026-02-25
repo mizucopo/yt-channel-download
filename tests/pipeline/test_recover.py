@@ -4,91 +4,95 @@ from pathlib import Path
 
 import pytest
 
-from src import db
 from src.models.stream import Stream
 from src.pipeline.recover import RecoverPipeline
+from src.repository import StreamRepository
 
 
-@pytest.fixture(autouse=True)
-def setup_test_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """テスト用データベースをセットアップする."""
-    test_db_path = str(tmp_path / "test.db")
-    monkeypatch.setattr("src.config.settings.database_path", test_db_path)
-    monkeypatch.setattr("src.config.settings.max_retries", 3)
-    db.init_db()
+@pytest.fixture
+def repository(tmp_path: Path) -> StreamRepository:
+    """テスト用リポジトリを作成する."""
+    db_path = tmp_path / "test.db"
+    repo = StreamRepository(db_path)
+    repo.init_db()
+    return repo
 
 
-def test_recover_streams_reverts_downloading_to_discovered() -> None:
-    """recover_streamsがdownloading状態をdiscoveredに戻すこと.
+def test_recover_all_reverts_downloading_to_discovered(
+    repository: StreamRepository,
+) -> None:
+    """recover_allがdownloading状態をdiscoveredに戻すこと.
 
     Arrange:
         downloadingステータスのストリームを登録する。
 
     Act:
-        recover_streams()を呼び出す。
+        recover_all()を呼び出す。
 
     Assert:
         ステータスがdiscoveredに戻っていること。
     """
     # Arrange
-    db.insert_stream(
+    repository.insert(
         Stream(video_id="video1", status="downloading", title="Test Video")
     )
 
     # Act
-    count = RecoverPipeline(max_retries=3).recover_all()
+    count = RecoverPipeline(max_retries=3, repository=repository).recover_all()
 
     # Assert
     assert count == 1
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "discovered"
 
 
-def test_recover_streams_reverts_uploading_to_thumbs_done() -> None:
-    """recover_streamsがuploading状態をthumbs_doneに戻すこと.
+def test_recover_all_reverts_uploading_to_thumbs_done(
+    repository: StreamRepository,
+) -> None:
+    """recover_allがuploading状態をthumbs_doneに戻すこと.
 
     Arrange:
         uploadingステータスのストリームを登録する。
 
     Act:
-        recover_streams()を呼び出す。
+        recover_all()を呼び出す。
 
     Assert:
         ステータスがthumbs_doneに戻っていること。
     """
     # Arrange
-    db.insert_stream(Stream(video_id="video1", status="uploading", title="Test Video"))
+    repository.insert(Stream(video_id="video1", status="uploading", title="Test Video"))
 
     # Act
-    count = RecoverPipeline(max_retries=3).recover_all()
+    count = RecoverPipeline(max_retries=3, repository=repository).recover_all()
 
     # Assert
     assert count == 1
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "thumbs_done"
 
 
-def test_recover_streams_respects_max_retries() -> None:
-    """recover_streamsがリトライ上限に達したストリームをスキップすること.
+def test_recover_all_respects_max_retries(repository: StreamRepository) -> None:
+    """recover_allがリトライ上限に達したストリームをスキップすること.
 
     Arrange:
         リトライ回数が上限に達したdownloadingストリームを登録する。
 
     Act:
-        recover_streams()を呼び出す。
+        recover_all()を呼び出す。
 
     Assert:
         ステータスが変更されないこと。
     """
     # Arrange
-    db.insert_stream(
+    repository.insert(
         Stream(video_id="video1", status="downloading", title="Test Video")
     )
     # リトライ回数を上限まで増やす
     for _ in range(3):
-        db.update_status(
+        repository.update_status(
             "video1",
             "downloading",
             expected_old_status="downloading",
@@ -96,10 +100,10 @@ def test_recover_streams_respects_max_retries() -> None:
         )
 
     # Act
-    count = RecoverPipeline(max_retries=3).recover_all()
+    count = RecoverPipeline(max_retries=3, repository=repository).recover_all()
 
     # Assert
     assert count == 0
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "downloading"

@@ -5,21 +5,23 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src import db
 from src.models.stream import Stream
 from src.pipeline.thumbs import ThumbsPipeline
+from src.repository import StreamRepository
 
 
-@pytest.fixture(autouse=True)
-def setup_test_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """テスト用データベースをセットアップする."""
-    test_db_path = str(tmp_path / "test.db")
-    monkeypatch.setattr("src.config.settings.database_path", test_db_path)
-    monkeypatch.setattr("src.config.settings.max_retries", 3)
-    db.init_db()
+@pytest.fixture
+def repository(tmp_path: Path) -> StreamRepository:
+    """テスト用リポジトリを作成する."""
+    db_path = tmp_path / "test.db"
+    repo = StreamRepository(db_path)
+    repo.init_db()
+    return repo
 
 
-def test_extract_thumbnails_updates_status_on_success(tmp_path: Path) -> None:
+def test_extract_thumbnails_updates_status_on_success(
+    repository: StreamRepository, tmp_path: Path
+) -> None:
     """extract_thumbnailsが成功時にステータスを更新すること.
 
     Arrange:
@@ -33,7 +35,7 @@ def test_extract_thumbnails_updates_status_on_success(tmp_path: Path) -> None:
         ステータスがthumbs_doneに更新されていること。
     """
     # Arrange
-    db.insert_stream(
+    repository.insert(
         Stream(
             video_id="video1",
             status="downloaded",
@@ -54,16 +56,19 @@ def test_extract_thumbnails_updates_status_on_success(tmp_path: Path) -> None:
             max_retries=3,
             thumbnail_interval=60,
             thumbnail_dir=thumbnail_dir,
+            repository=repository,
         ).extract_thumbnails("video1", "/path/to/video.mp4")
 
     # Assert
     assert success is True
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "thumbs_done"
 
 
-def test_extract_thumbnails_reverts_status_on_failure(tmp_path: Path) -> None:
+def test_extract_thumbnails_reverts_status_on_failure(
+    repository: StreamRepository, tmp_path: Path
+) -> None:
     """extract_thumbnailsが失敗時にステータスを元に戻すこと.
 
     Arrange:
@@ -77,7 +82,7 @@ def test_extract_thumbnails_reverts_status_on_failure(tmp_path: Path) -> None:
         ステータスがdownloadedに戻っていること。
     """
     # Arrange
-    db.insert_stream(
+    repository.insert(
         Stream(
             video_id="video1",
             status="downloaded",
@@ -98,10 +103,11 @@ def test_extract_thumbnails_reverts_status_on_failure(tmp_path: Path) -> None:
             max_retries=3,
             thumbnail_interval=60,
             thumbnail_dir=thumbnail_dir,
+            repository=repository,
         ).extract_thumbnails("video1", "/path/to/video.mp4")
 
     # Assert
     assert success is False
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "downloaded"

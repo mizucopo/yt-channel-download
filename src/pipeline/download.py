@@ -7,8 +7,6 @@ import logging
 import subprocess
 from pathlib import Path
 
-from src import db
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,15 +17,18 @@ class DownloadPipeline:
         self,
         max_retries: int,
         download_dir: Path,
+        repository: "StreamRepository",
     ) -> None:
         """パイプラインを初期化する.
 
         Args:
             max_retries: 最大リトライ回数
             download_dir: ダウンロード保存ディレクトリ
+            repository: ストリームリポジトリ
         """
         self._max_retries = max_retries
         self._download_dir = download_dir
+        self._repository = repository
 
     def download_video(self, video_id: str) -> bool:
         """指定された動画をダウンロードする.
@@ -39,7 +40,7 @@ class DownloadPipeline:
             ダウンロードが成功した場合はTrue
         """
         # CAS更新: discovered -> downloading
-        updated = db.update_status(
+        updated = self._repository.update_status(
             video_id,
             "downloading",
             expected_old_status="discovered",
@@ -71,7 +72,7 @@ class DownloadPipeline:
 
             if result.returncode != 0:
                 logger.error("Download failed for %s: %s", video_id, result.stderr)
-                db.update_status(
+                self._repository.update_status(
                     video_id,
                     "discovered",
                     expected_old_status="downloading",
@@ -83,7 +84,7 @@ class DownloadPipeline:
                 return False
 
             # CAS更新: downloading -> downloaded
-            db.update_status(
+            self._repository.update_status(
                 video_id,
                 "downloaded",
                 expected_old_status="downloading",
@@ -94,7 +95,7 @@ class DownloadPipeline:
 
         except Exception as e:
             logger.exception("Download error for %s", video_id)
-            db.update_status(
+            self._repository.update_status(
                 video_id,
                 "discovered",
                 expected_old_status="downloading",
@@ -109,7 +110,7 @@ class DownloadPipeline:
         Returns:
             ダウンロード対象があった場合はTrue
         """
-        stream = db.get_next_pending("discovered", self._max_retries)
+        stream = self._repository.get_next_pending("discovered", self._max_retries)
         if stream is None:
             return False
 
@@ -127,3 +128,6 @@ class DownloadPipeline:
                 break
             count += 1
         return count
+
+
+from src.repository import StreamRepository  # noqa: E402

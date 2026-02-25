@@ -4,33 +4,30 @@ from pathlib import Path
 
 import pytest
 
-from src import db
 from src.models.stream import Stream
+from src.repository import StreamRepository
 
 
-@pytest.fixture(autouse=True)
-def setup_test_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """テスト用データベースをセットアップする.
-
-    Arrange:
-        一時ディレクトリにテスト用データベースを作成する。
-    """
-    test_db_path = str(tmp_path / "test.db")
-    monkeypatch.setattr("src.config.settings.database_path", test_db_path)
-    db.init_db()
+@pytest.fixture
+def repository(tmp_path: Path) -> StreamRepository:
+    """テスト用リポジトリを作成する."""
+    db_path = tmp_path / "test.db"
+    repo = StreamRepository(db_path)
+    repo.init_db()
+    return repo
 
 
-def test_insert_stream_creates_new_record() -> None:
-    """新しいストリームを登録すると、データベースにレコードが作成されること.
+def test_insert_creates_new_record(repository: StreamRepository) -> None:
+    """新しいストリームを登録すると、レコードが作成されること.
 
     Arrange:
         テスト用のストリームデータを準備する。
 
     Act:
-        insert_stream()を呼び出してストリームを登録する。
+        insert()を呼び出してストリームを登録する。
 
     Assert:
-        get_stream()で取得したレコードが登録したデータと一致すること。
+        get()で取得したレコードが登録したデータと一致すること。
     """
     # Arrange
     stream = Stream(
@@ -41,54 +38,56 @@ def test_insert_stream_creates_new_record() -> None:
     )
 
     # Act
-    db.insert_stream(stream)
+    repository.insert(stream)
 
     # Assert
-    result = db.get_stream("test_video_id")
+    result = repository.get("test_video_id")
     assert result is not None
     assert result.video_id == "test_video_id"
     assert result.status == "discovered"
     assert result.title == "Test Video"
 
 
-def test_get_stream_returns_none_for_nonexistent_video() -> None:
-    """存在しないvideo_idでget_streamを呼び出すとNoneが返されること.
+def test_get_returns_none_for_nonexistent_video(repository: StreamRepository) -> None:
+    """存在しないvideo_idでgetを呼び出すとNoneが返されること.
 
     Arrange:
-        データベースを初期化する（レコードなし）。
+        リポジトリを初期化する（レコードなし）。
 
     Act:
-        存在しないvideo_idでget_stream()を呼び出す。
+        存在しないvideo_idでget()を呼び出す。
 
     Assert:
         Noneが返されること。
     """
     # Act
-    result = db.get_stream("nonexistent_id")
+    result = repository.get("nonexistent_id")
 
     # Assert
     assert result is None
 
 
-def test_get_streams_by_status_returns_matching_records() -> None:
+def test_get_by_status_returns_matching_records(
+    repository: StreamRepository,
+) -> None:
     """指定したステータスのストリームのみが取得されること.
 
     Arrange:
         異なるステータスを持つ複数のストリームを登録する。
 
     Act:
-        get_streams_by_status()で特定のステータスを指定して取得する。
+        get_by_status()で特定のステータスを指定して取得する。
 
     Assert:
         指定したステータスのストリームのみが返されること。
     """
     # Arrange
-    db.insert_stream(Stream(video_id="video1", status="discovered", title="Video 1"))
-    db.insert_stream(Stream(video_id="video2", status="downloaded", title="Video 2"))
-    db.insert_stream(Stream(video_id="video3", status="discovered", title="Video 3"))
+    repository.insert(Stream(video_id="video1", status="discovered", title="Video 1"))
+    repository.insert(Stream(video_id="video2", status="downloaded", title="Video 2"))
+    repository.insert(Stream(video_id="video3", status="discovered", title="Video 3"))
 
     # Act
-    result = db.get_streams_by_status("discovered")
+    result = repository.get_by_status("discovered")
 
     # Assert
     assert len(result) == 2
@@ -98,7 +97,7 @@ def test_get_streams_by_status_returns_matching_records() -> None:
     assert "video2" not in video_ids
 
 
-def test_update_status_changes_status() -> None:
+def test_update_status_changes_status(repository: StreamRepository) -> None:
     """update_statusでステータスが更新されること.
 
     Arrange:
@@ -111,19 +110,23 @@ def test_update_status_changes_status() -> None:
         ステータスが正しく更新されていること。
     """
     # Arrange
-    db.insert_stream(Stream(video_id="video1", status="discovered", title="Test Video"))
+    repository.insert(
+        Stream(video_id="video1", status="discovered", title="Test Video")
+    )
 
     # Act
-    success = db.update_status("video1", "downloaded", expected_old_status="discovered")
+    success = repository.update_status(
+        "video1", "downloaded", expected_old_status="discovered"
+    )
 
     # Assert
     assert success is True
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "downloaded"
 
 
-def test_update_status_with_cas_fails_on_mismatch() -> None:
+def test_update_status_with_cas_fails_on_mismatch(repository: StreamRepository) -> None:
     """CAS更新でステータスが一致しない場合、更新が失敗すること.
 
     Arrange:
@@ -136,19 +139,23 @@ def test_update_status_with_cas_fails_on_mismatch() -> None:
         更新が失敗し、ステータスが変更されないこと。
     """
     # Arrange
-    db.insert_stream(Stream(video_id="video1", status="discovered", title="Test Video"))
+    repository.insert(
+        Stream(video_id="video1", status="discovered", title="Test Video")
+    )
 
     # Act
-    success = db.update_status("video1", "uploading", expected_old_status="downloaded")
+    success = repository.update_status(
+        "video1", "uploading", expected_old_status="downloaded"
+    )
 
     # Assert
     assert success is False
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "discovered"
 
 
-def test_update_status_updates_local_path() -> None:
+def test_update_status_updates_local_path(repository: StreamRepository) -> None:
     """update_statusでlocal_pathが更新されること.
 
     Arrange:
@@ -161,10 +168,12 @@ def test_update_status_updates_local_path() -> None:
         両方のフィールドが正しく更新されていること。
     """
     # Arrange
-    db.insert_stream(Stream(video_id="video1", status="discovered", title="Test Video"))
+    repository.insert(
+        Stream(video_id="video1", status="discovered", title="Test Video")
+    )
 
     # Act
-    success = db.update_status(
+    success = repository.update_status(
         "video1",
         "downloaded",
         expected_old_status="discovered",
@@ -173,13 +182,13 @@ def test_update_status_updates_local_path() -> None:
 
     # Assert
     assert success is True
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "downloaded"
     assert result.local_path == "/path/to/video.mp4"
 
 
-def test_get_next_pending_returns_oldest_record() -> None:
+def test_get_next_pending_returns_oldest_record(repository: StreamRepository) -> None:
     """get_next_pendingで最も古いレコードが取得されること.
 
     Arrange:
@@ -192,18 +201,18 @@ def test_get_next_pending_returns_oldest_record() -> None:
         最も古いレコードが返されること。
     """
     # Arrange
-    db.insert_stream(Stream(video_id="video1", status="discovered", title="Video 1"))
-    db.insert_stream(Stream(video_id="video2", status="discovered", title="Video 2"))
+    repository.insert(Stream(video_id="video1", status="discovered", title="Video 1"))
+    repository.insert(Stream(video_id="video2", status="discovered", title="Video 2"))
 
     # Act
-    result = db.get_next_pending("discovered", max_retries=3)
+    result = repository.get_next_pending("discovered", max_retries=3)
 
     # Assert
     assert result is not None
     assert result.video_id == "video1"
 
 
-def test_get_next_pending_respects_max_retries() -> None:
+def test_get_next_pending_respects_max_retries(repository: StreamRepository) -> None:
     """リトライ回数が上限に達したストリームはget_next_pendingで取得されないこと.
 
     Arrange:
@@ -216,15 +225,15 @@ def test_get_next_pending_respects_max_retries() -> None:
         リトライ回数が上限未満のストリームのみが返されること。
     """
     # Arrange
-    db.insert_stream(Stream(video_id="video1", status="discovered", title="Video 1"))
-    db.insert_stream(Stream(video_id="video2", status="discovered", title="Video 2"))
+    repository.insert(Stream(video_id="video1", status="discovered", title="Video 1"))
+    repository.insert(Stream(video_id="video2", status="discovered", title="Video 2"))
     # video1のリトライ回数を増やす
-    db.update_status(
+    repository.update_status(
         "video1", "discovered", expected_old_status="discovered", increment_retry=True
     )
 
     # Act
-    result = db.get_next_pending("discovered", max_retries=1)
+    result = repository.get_next_pending("discovered", max_retries=1)
 
     # Assert
     assert result is not None

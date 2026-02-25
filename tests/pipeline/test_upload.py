@@ -5,21 +5,23 @@ from unittest.mock import Mock
 
 import pytest
 
-from src import db
 from src.models.stream import Stream
 from src.pipeline.upload import UploadPipeline
+from src.repository import StreamRepository
 
 
-@pytest.fixture(autouse=True)
-def setup_test_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """テスト用データベースをセットアップする."""
-    test_db_path = str(tmp_path / "test.db")
-    monkeypatch.setattr("src.config.settings.database_path", test_db_path)
-    monkeypatch.setattr("src.config.settings.max_retries", 3)
-    db.init_db()
+@pytest.fixture
+def repository(tmp_path: Path) -> StreamRepository:
+    """テスト用リポジトリを作成する."""
+    db_path = tmp_path / "test.db"
+    repo = StreamRepository(db_path)
+    repo.init_db()
+    return repo
 
 
-def test_upload_video_updates_status_on_success(tmp_path: Path) -> None:
+def test_upload_video_updates_status_on_success(
+    repository: StreamRepository, tmp_path: Path
+) -> None:
     """upload_videoが成功時にステータスを更新すること.
 
     Arrange:
@@ -37,7 +39,7 @@ def test_upload_video_updates_status_on_success(tmp_path: Path) -> None:
     video_path = tmp_path / "video.mp4"
     video_path.touch()
 
-    db.insert_stream(
+    repository.insert(
         Stream(
             video_id="video1",
             status="thumbs_done",
@@ -57,17 +59,20 @@ def test_upload_video_updates_status_on_success(tmp_path: Path) -> None:
         gdrive_provider=mock_provider,
         gdrive_root_folder_id="folder_id",
         thumbnail_dir=thumbnail_dir,
+        repository=repository,
     ).upload_video("video1", str(video_path))
 
     # Assert
     assert success is True
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "uploaded"
     assert result.gdrive_file_id == "gdrive_file_id"
 
 
-def test_upload_video_reverts_status_on_failure(tmp_path: Path) -> None:
+def test_upload_video_reverts_status_on_failure(
+    repository: StreamRepository, tmp_path: Path
+) -> None:
     """upload_videoが失敗時にステータスを元に戻すこと.
 
     Arrange:
@@ -85,7 +90,7 @@ def test_upload_video_reverts_status_on_failure(tmp_path: Path) -> None:
     video_path = tmp_path / "video.mp4"
     video_path.touch()
 
-    db.insert_stream(
+    repository.insert(
         Stream(
             video_id="video1",
             status="thumbs_done",
@@ -105,10 +110,11 @@ def test_upload_video_reverts_status_on_failure(tmp_path: Path) -> None:
         gdrive_provider=mock_provider,
         gdrive_root_folder_id="folder_id",
         thumbnail_dir=thumbnail_dir,
+        repository=repository,
     ).upload_video("video1", str(video_path))
 
     # Assert
     assert success is False
-    result = db.get_stream("video1")
+    result = repository.get("video1")
     assert result is not None
     assert result.status == "thumbs_done"
