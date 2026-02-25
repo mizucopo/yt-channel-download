@@ -2,23 +2,12 @@
 
 from pathlib import Path
 
-import pytest
 
-
-@pytest.fixture(autouse=True)
-def setup_test_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """テスト用パスをセットアップする."""
-    monkeypatch.setattr("src.config.settings.download_dir", str(tmp_path / "downloads"))
-    monkeypatch.setattr(
-        "src.config.settings.thumbnail_dir", str(tmp_path / "thumbnails")
-    )
-
-
-def test_get_download_path_returns_correct_path() -> None:
+def test_get_download_path_returns_correct_path(tmp_path: Path) -> None:
     """get_download_pathが正しいパスを返すこと.
 
     Arrange:
-        テスト用のvideo_idを準備する。
+        テスト用のvideo_idとdownload_dirを準備する。
 
     Act:
         get_download_path()を呼び出す。
@@ -30,20 +19,21 @@ def test_get_download_path_returns_correct_path() -> None:
     from src.utils.paths import get_download_path
 
     video_id = "test_video_id"
+    download_dir = tmp_path / "downloads"
 
     # Act
-    result = get_download_path(video_id)
+    result = get_download_path(video_id, download_dir)
 
     # Assert
     assert result.name == "test_video_id.mp4"
     assert "downloads" in str(result)
 
 
-def test_get_thumbnail_dir_creates_directory() -> None:
+def test_get_thumbnail_dir_creates_directory(tmp_path: Path) -> None:
     """get_thumbnail_dirがディレクトリを作成すること.
 
     Arrange:
-        テスト用のvideo_idを準備する。
+        テスト用のvideo_idとthumbnail_dirを準備する。
 
     Act:
         get_thumbnail_dir()を呼び出す。
@@ -55,9 +45,10 @@ def test_get_thumbnail_dir_creates_directory() -> None:
     from src.utils.paths import get_thumbnail_dir
 
     video_id = "test_video_id"
+    thumbnail_dir = tmp_path / "thumbnails"
 
     # Act
-    result = get_thumbnail_dir(video_id)
+    result = get_thumbnail_dir(video_id, thumbnail_dir)
 
     # Assert
     assert result.name == video_id
@@ -65,11 +56,11 @@ def test_get_thumbnail_dir_creates_directory() -> None:
     assert result.is_dir()
 
 
-def test_get_thumbnail_path_returns_correct_path() -> None:
+def test_get_thumbnail_path_returns_correct_path(tmp_path: Path) -> None:
     """get_thumbnail_pathが正しいパスを返すこと.
 
     Arrange:
-        テスト用のvideo_idとindexを準備する。
+        テスト用のvideo_id、index、thumbnail_dirを準備する。
 
     Act:
         get_thumbnail_path()を呼び出す。
@@ -82,9 +73,10 @@ def test_get_thumbnail_path_returns_correct_path() -> None:
 
     video_id = "test_video_id"
     index = 5
+    thumbnail_dir = tmp_path / "thumbnails"
 
     # Act
-    result = get_thumbnail_path(video_id, index)
+    result = get_thumbnail_path(video_id, index, thumbnail_dir)
 
     # Assert
     assert result.name == "thumb_0005.jpg"

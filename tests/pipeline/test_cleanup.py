@@ -14,10 +14,6 @@ def setup_test_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """テスト用データベースをセットアップする."""
     test_db_path = str(tmp_path / "test.db")
     monkeypatch.setattr("src.config.settings.database_path", test_db_path)
-    monkeypatch.setattr("src.config.settings.download_dir", str(tmp_path / "downloads"))
-    monkeypatch.setattr(
-        "src.config.settings.thumbnail_dir", str(tmp_path / "thumbnails")
-    )
     monkeypatch.setattr("src.config.settings.max_retries", 3)
     db.init_db()
 
@@ -40,7 +36,8 @@ def test_cleanup_video_deletes_files(tmp_path: Path) -> None:
     video_path.parent.mkdir(parents=True, exist_ok=True)
     video_path.touch()
 
-    thumb_dir = tmp_path / "thumbnails" / "video1"
+    thumbnail_dir = tmp_path / "thumbnails"
+    thumb_dir = thumbnail_dir / "video1"
     thumb_dir.mkdir(parents=True)
     (thumb_dir / "thumb_0001.jpg").touch()
 
@@ -54,7 +51,11 @@ def test_cleanup_video_deletes_files(tmp_path: Path) -> None:
     )
 
     # Act
-    success = CleanupPipeline().cleanup_video("video1", str(video_path))
+    success = CleanupPipeline(
+        max_retries=3,
+        download_dir=tmp_path / "downloads",
+        thumbnail_dir=thumbnail_dir,
+    ).cleanup_video("video1", str(video_path))
 
     # Assert
     assert success is True
@@ -65,7 +66,7 @@ def test_cleanup_video_deletes_files(tmp_path: Path) -> None:
     assert result.status == "cleaned"
 
 
-def test_cleanup_video_handles_missing_files() -> None:
+def test_cleanup_video_handles_missing_files(tmp_path: Path) -> None:
     """cleanup_videoが存在しないファイルを適切に処理すること.
 
     Arrange:
@@ -89,7 +90,11 @@ def test_cleanup_video_handles_missing_files() -> None:
     )
 
     # Act
-    success = CleanupPipeline().cleanup_video("video1", "/nonexistent/video.mp4")
+    success = CleanupPipeline(
+        max_retries=3,
+        download_dir=tmp_path / "downloads",
+        thumbnail_dir=tmp_path / "thumbnails",
+    ).cleanup_video("video1", "/nonexistent/video.mp4")
 
     # Assert
     assert success is True

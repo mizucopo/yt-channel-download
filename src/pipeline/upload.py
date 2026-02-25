@@ -9,7 +9,6 @@ from pathlib import Path
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
 from src import db
-from src.config import settings
 from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
@@ -18,15 +17,25 @@ logger = logging.getLogger(__name__)
 class UploadPipeline:
     """Google Driveアップロードパイプライン."""
 
-    def __init__(self, max_retries: int | None = None) -> None:
+    def __init__(
+        self,
+        max_retries: int,
+        gdrive_provider: GoogleDriveProvider,
+        gdrive_root_folder_id: str,
+        thumbnail_dir: Path,
+    ) -> None:
         """パイプラインを初期化する.
 
         Args:
-            max_retries: 最大リトライ回数（Noneの場合は設定値を使用）
+            max_retries: 最大リトライ回数
+            gdrive_provider: Google Driveプロバイダー
+            gdrive_root_folder_id: Google DriveルートフォルダID
+            thumbnail_dir: サムネイルディレクトリ
         """
-        self._max_retries = (
-            max_retries if max_retries is not None else settings.max_retries
-        )
+        self._max_retries = max_retries
+        self._gdrive_provider = gdrive_provider
+        self._gdrive_root_folder_id = gdrive_root_folder_id
+        self._thumbnail_dir = thumbnail_dir
 
     def upload_video(self, video_id: str, local_path: str) -> bool:
         """動画とサムネイルをGoogle Driveにアップロードする.
@@ -49,29 +58,25 @@ class UploadPipeline:
             return False
 
         try:
-            provider = GoogleDriveProvider(
-                credentials_path=settings.gdrive_credentials_path
-            )
-
             # 動画ファイルをアップロード
             video_file = Path(local_path)
             if not video_file.exists():
                 raise FileNotFoundError(f"Video file not found: {local_path}")
 
             logger.info("Uploading video: %s", video_id)
-            video_gdrive_id = provider.upload_file(
+            video_gdrive_id = self._gdrive_provider.upload_file(
                 file_path=str(video_file),
-                parent_folder_id=settings.gdrive_root_folder_id,
+                parent_folder_id=self._gdrive_root_folder_id,
                 file_name=video_file.name,
             )
 
             # サムネイルフォルダをアップロード
-            thumb_dir = get_thumbnail_dir(video_id)
+            thumb_dir = get_thumbnail_dir(video_id, self._thumbnail_dir)
             if thumb_dir.exists():
                 logger.info("Uploading thumbnails: %s", video_id)
-                provider.upload_directory(
+                self._gdrive_provider.upload_directory(
                     directory_path=str(thumb_dir),
-                    parent_folder_id=settings.gdrive_root_folder_id,
+                    parent_folder_id=self._gdrive_root_folder_id,
                     folder_name=f"{video_id}_thumbnails",
                 )
 

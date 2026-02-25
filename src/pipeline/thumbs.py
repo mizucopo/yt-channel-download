@@ -5,10 +5,10 @@ ffmpegを使用して動画からスクリーンショットを抽出する。
 
 import logging
 import subprocess
+from pathlib import Path
 
 from src import db
-from src.config import settings
-from src.utils.paths import get_thumbnail_dir, get_thumbnail_path
+from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +16,22 @@ logger = logging.getLogger(__name__)
 class ThumbsPipeline:
     """サムネイル抽出パイプライン."""
 
-    def __init__(self, max_retries: int | None = None) -> None:
+    def __init__(
+        self,
+        max_retries: int,
+        thumbnail_interval: int,
+        thumbnail_dir: Path,
+    ) -> None:
         """パイプラインを初期化する.
 
         Args:
-            max_retries: 最大リトライ回数（Noneの場合は設定値を使用）
+            max_retries: 最大リトライ回数
+            thumbnail_interval: サムネイル抽出間隔（秒）
+            thumbnail_dir: サムネイル保存ディレクトリ
         """
-        self._max_retries = (
-            max_retries if max_retries is not None else settings.max_retries
-        )
+        self._max_retries = max_retries
+        self._thumbnail_interval = thumbnail_interval
+        self._thumbnail_dir = thumbnail_dir
 
     def extract_thumbnails(self, video_id: str, local_path: str) -> bool:
         """動画からサムネイルを抽出する.
@@ -50,13 +57,13 @@ class ThumbsPipeline:
 
         try:
             # サムネイルディレクトリを作成
-            get_thumbnail_dir(video_id)
-            interval = settings.thumbnail_interval
+            thumb_dir = get_thumbnail_dir(video_id, self._thumbnail_dir)
+            thumb_dir.mkdir(parents=True, exist_ok=True)
 
             logger.info(
                 "Extracting thumbnails from %s at %d second intervals",
                 video_id,
-                interval,
+                self._thumbnail_interval,
             )
 
             result = subprocess.run(
@@ -65,10 +72,10 @@ class ThumbsPipeline:
                     "-i",
                     local_path,
                     "-vf",
-                    f"fps=1/{interval}",
+                    f"fps=1/{self._thumbnail_interval}",
                     "-q:v",
                     "2",
-                    str(get_thumbnail_path(video_id, 0).parent / "thumb_%04d.jpg"),
+                    str(thumb_dir / "thumb_%04d.jpg"),
                 ],
                 capture_output=True,
                 text=True,

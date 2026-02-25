@@ -6,7 +6,6 @@
 import logging
 
 from src import db
-from src.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,15 +13,13 @@ logger = logging.getLogger(__name__)
 class RecoverPipeline:
     """中断状態回復パイプライン."""
 
-    def __init__(self, max_retries: int | None = None) -> None:
+    def __init__(self, max_retries: int) -> None:
         """パイプラインを初期化する.
 
         Args:
-            max_retries: 最大リトライ回数（Noneの場合は設定値を使用）
+            max_retries: 最大リトライ回数
         """
-        self._max_retries = (
-            max_retries if max_retries is not None else settings.max_retries
-        )
+        self._max_retries = max_retries
 
     def recover_streams(self) -> int:
         """中断されたストリームを回復する.

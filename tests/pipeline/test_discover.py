@@ -20,14 +20,11 @@ def setup_test_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     db.init_db()
 
 
-def test_discover_videos_registers_new_videos(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_discover_videos_registers_new_videos() -> None:
     """discover_videosが新しい動画を登録すること.
 
     Arrange:
         YouTube APIクライアントのモックを準備する。
-        チャンネルIDを設定する。
 
     Act:
         discover_videos()を呼び出す。
@@ -45,10 +42,12 @@ def test_discover_videos_registers_new_videos(
             duration="PT1H",
         ),
     ]
-    monkeypatch.setattr("src.config.settings.youtube_channel_ids", ["channel1"])
 
     # Act
-    count = DiscoverPipeline(client=mock_client).discover_videos()
+    count = DiscoverPipeline(
+        client=mock_client,
+        channel_ids=["channel1"],
+    ).discover_videos()
 
     # Assert
     assert count == 1
@@ -57,9 +56,7 @@ def test_discover_videos_registers_new_videos(
     assert result.title == "Test Video 1"
 
 
-def test_discover_videos_skips_existing_videos(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_discover_videos_skips_existing_videos() -> None:
     """discover_videosが既存の動画をスキップすること.
 
     Arrange:
@@ -86,10 +83,12 @@ def test_discover_videos_skips_existing_videos(
             duration="PT1H",
         ),
     ]
-    monkeypatch.setattr("src.config.settings.youtube_channel_ids", ["channel1"])
 
     # Act
-    count = DiscoverPipeline(client=mock_client).discover_videos()
+    count = DiscoverPipeline(
+        client=mock_client,
+        channel_ids=["channel1"],
+    ).discover_videos()
 
     # Assert
     assert count == 0

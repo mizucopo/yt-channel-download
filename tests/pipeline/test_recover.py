@@ -36,7 +36,7 @@ def test_recover_streams_reverts_downloading_to_discovered() -> None:
     )
 
     # Act
-    count = RecoverPipeline().recover_streams()
+    count = RecoverPipeline(max_retries=3).recover_streams()
 
     # Assert
     assert count == 1
@@ -61,7 +61,7 @@ def test_recover_streams_reverts_uploading_to_thumbs_done() -> None:
     db.insert_stream(Stream(video_id="video1", status="uploading", title="Test Video"))
 
     # Act
-    count = RecoverPipeline().recover_streams()
+    count = RecoverPipeline(max_retries=3).recover_streams()
 
     # Assert
     assert count == 1
@@ -70,9 +70,7 @@ def test_recover_streams_reverts_uploading_to_thumbs_done() -> None:
     assert result.status == "thumbs_done"
 
 
-def test_recover_streams_respects_max_retries(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_recover_streams_respects_max_retries() -> None:
     """recover_streamsがリトライ上限に達したストリームをスキップすること.
 
     Arrange:
@@ -97,10 +95,8 @@ def test_recover_streams_respects_max_retries(
             increment_retry=True,
         )
 
-    monkeypatch.setattr("src.config.settings.max_retries", 3)
-
     # Act
-    count = RecoverPipeline().recover_streams()
+    count = RecoverPipeline(max_retries=3).recover_streams()
 
     # Assert
     assert count == 0

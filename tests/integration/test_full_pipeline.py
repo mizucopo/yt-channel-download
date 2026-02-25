@@ -13,6 +13,7 @@ from src.pipeline.discover import DiscoverPipeline
 from src.pipeline.download import DownloadPipeline
 from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
+from src.youtube_client import YouTubeClient
 
 
 @pytest.fixture(autouse=True)
@@ -21,17 +22,8 @@ def setup_test_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
         "src.config.settings.database_path", str(tmp_path / "streams.db")
     )
-    monkeypatch.setattr("src.config.settings.download_dir", str(tmp_path / "downloads"))
-    monkeypatch.setattr(
-        "src.config.settings.thumbnail_dir", str(tmp_path / "thumbnails")
-    )
     monkeypatch.setattr("src.config.settings.max_retries", 3)
     monkeypatch.setattr("src.config.settings.thumbnail_interval", 60)
-    monkeypatch.setattr(
-        "src.config.settings.gdrive_credentials_path", "credentials.json"
-    )
-    monkeypatch.setattr("src.config.settings.gdrive_root_folder_id", "folder_id")
-    monkeypatch.setattr("src.config.settings.youtube_channel_ids", ["channel1"])
     db.init_db()
 
 
@@ -51,7 +43,7 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
         最終的にcleanedステータスになること。
     """
     # Arrange
-    mock_yt_client = Mock()
+    mock_yt_client = Mock(spec=YouTubeClient)
     mock_yt_client.get_live_archives.return_value = [
         VideoInfo(
             video_id="video1",
@@ -72,9 +64,14 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
     mock_gdrive_provider = Mock()
     mock_gdrive_provider.upload_file.return_value = "gdrive_file_id"
 
+    download_dir = tmp_path / "downloads"
+    thumbnail_dir = tmp_path / "thumbnails"
+
     # Act & Assert - Discover
-    with patch("src.pipeline.discover.YouTubeClient", return_value=mock_yt_client):
-        count = DiscoverPipeline(client=mock_yt_client).discover_videos()
+    count = DiscoverPipeline(
+        client=mock_yt_client,
+        channel_ids=["channel1"],
+    ).discover_videos()
     assert count == 1
 
     result = db.get_stream("video1")
@@ -82,15 +79,15 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
     assert result.status == "discovered"
 
     # Act & Assert - Download
-    video_path = tmp_path / "downloads" / "video1.mp4"
+    video_path = download_dir / "video1.mp4"
     video_path.parent.mkdir(parents=True, exist_ok=True)
     video_path.touch()
 
-    with (
-        patch("subprocess.run", return_value=mock_download_result),
-        patch("src.pipeline.download.get_download_path", return_value=video_path),
-    ):
-        success = DownloadPipeline().download_video("video1")
+    with patch("subprocess.run", return_value=mock_download_result):
+        success = DownloadPipeline(
+            max_retries=3,
+            download_dir=download_dir,
+        ).download_video("video1")
     assert success is True
 
     result = db.get_stream("video1")
@@ -99,7 +96,11 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
 
     # Act & Assert - Thumbnails
     with patch("subprocess.run", return_value=mock_thumb_result):
-        success = ThumbsPipeline().extract_thumbnails("video1", str(video_path))
+        success = ThumbsPipeline(
+            max_retries=3,
+            thumbnail_interval=60,
+            thumbnail_dir=thumbnail_dir,
+        ).extract_thumbnails("video1", str(video_path))
     assert success is True
 
     result = db.get_stream("video1")
@@ -107,10 +108,12 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
     assert result.status == "thumbs_done"
 
     # Act & Assert - Upload
-    with patch(
-        "src.pipeline.upload.GoogleDriveProvider", return_value=mock_gdrive_provider
-    ):
-        success = UploadPipeline().upload_video("video1", str(video_path))
+    success = UploadPipeline(
+        max_retries=3,
+        gdrive_provider=mock_gdrive_provider,
+        gdrive_root_folder_id="folder_id",
+        thumbnail_dir=thumbnail_dir,
+    ).upload_video("video1", str(video_path))
     assert success is True
 
     result = db.get_stream("video1")
@@ -118,7 +121,11 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
     assert result.status == "uploaded"
 
     # Act & Assert - Cleanup
-    success = CleanupPipeline().cleanup_video("video1", str(video_path))
+    success = CleanupPipeline(
+        max_retries=3,
+        download_dir=download_dir,
+        thumbnail_dir=thumbnail_dir,
+    ).cleanup_video("video1", str(video_path))
     assert success is True
 
     result = db.get_stream("video1")

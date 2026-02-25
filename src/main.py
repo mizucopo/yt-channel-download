@@ -3,9 +3,14 @@
 Clickベースのコマンドラインインターフェースを提供する。
 """
 
+import logging
+from pathlib import Path
+
 import click
+from mizu_common.google_drive_provider import GoogleDriveProvider
 
 from src import db
+from src.config import settings
 from src.pipeline.cleanup import CleanupPipeline
 from src.pipeline.discover import DiscoverPipeline
 from src.pipeline.download import DownloadPipeline
@@ -15,6 +20,7 @@ from src.pipeline.upload import UploadPipeline
 from src.utils.locking import acquire_lock
 from src.utils.logging import setup_logging
 from src.utils.paths import ensure_directories
+from src.youtube_client import YouTubeClient
 
 
 @click.group()
@@ -25,13 +31,15 @@ def cli(verbose: bool) -> None:
     YouTubeライブアーカイブを自動的にダウンロードし、
     Google Driveへアップロードする。
     """
-    import logging
-
     level = logging.DEBUG if verbose else logging.INFO
     setup_logging(level)
 
     # 初期化
-    ensure_directories()
+    ensure_directories(
+        settings.download_dir,
+        settings.thumbnail_dir,
+        settings.database_path,
+    )
     db.init_db()
 
 
@@ -45,24 +53,51 @@ def run() -> None:
     with acquire_lock():
         click.echo("Starting full pipeline...")
 
+        # 共通設定
+        download_dir = Path(settings.download_dir)
+        thumbnail_dir = Path(settings.thumbnail_dir)
+        youtube_client = YouTubeClient(settings.youtube_api_key)
+        gdrive_provider = GoogleDriveProvider(
+            credentials_path=settings.gdrive_credentials_path
+        )
+
         click.echo("Discovering videos...")
-        discovered = DiscoverPipeline().discover_videos()
+        discovered = DiscoverPipeline(
+            client=youtube_client,
+            channel_ids=settings.youtube_channel_ids,
+        ).discover_videos()
         click.echo(f"  Discovered: {discovered} new videos")
 
         click.echo("Downloading videos...")
-        downloaded = DownloadPipeline().download_all()
+        downloaded = DownloadPipeline(
+            max_retries=settings.max_retries,
+            download_dir=download_dir,
+        ).download_all()
         click.echo(f"  Downloaded: {downloaded} videos")
 
         click.echo("Extracting thumbnails...")
-        thumbnailed = ThumbsPipeline().extract_all()
+        thumbnailed = ThumbsPipeline(
+            max_retries=settings.max_retries,
+            thumbnail_interval=settings.thumbnail_interval,
+            thumbnail_dir=thumbnail_dir,
+        ).extract_all()
         click.echo(f"  Extracted: {thumbnailed} videos")
 
         click.echo("Uploading to Google Drive...")
-        uploaded = UploadPipeline().upload_all()
+        uploaded = UploadPipeline(
+            max_retries=settings.max_retries,
+            gdrive_provider=gdrive_provider,
+            gdrive_root_folder_id=settings.gdrive_root_folder_id,
+            thumbnail_dir=thumbnail_dir,
+        ).upload_all()
         click.echo(f"  Uploaded: {uploaded} videos")
 
         click.echo("Cleaning up local files...")
-        cleaned = CleanupPipeline().cleanup_all()
+        cleaned = CleanupPipeline(
+            max_retries=settings.max_retries,
+            download_dir=download_dir,
+            thumbnail_dir=thumbnail_dir,
+        ).cleanup_all()
         click.echo(f"  Cleaned: {cleaned} videos")
 
         click.echo("Pipeline completed.")
@@ -72,7 +107,11 @@ def run() -> None:
 def discover_cmd() -> None:
     """新しいライブアーカイブを検出する."""
     with acquire_lock():
-        count = DiscoverPipeline().discover_videos()
+        youtube_client = YouTubeClient(settings.youtube_api_key)
+        count = DiscoverPipeline(
+            client=youtube_client,
+            channel_ids=settings.youtube_channel_ids,
+        ).discover_videos()
         click.echo(f"Discovered {count} new videos.")
 
 
@@ -80,7 +119,10 @@ def discover_cmd() -> None:
 def download_cmd() -> None:
     """待機中の動画をダウンロードする."""
     with acquire_lock():
-        count = DownloadPipeline().download_all()
+        count = DownloadPipeline(
+            max_retries=settings.max_retries,
+            download_dir=Path(settings.download_dir),
+        ).download_all()
         click.echo(f"Downloaded {count} videos.")
 
 
@@ -88,7 +130,11 @@ def download_cmd() -> None:
 def thumbs_cmd() -> None:
     """サムネイルを抽出する."""
     with acquire_lock():
-        count = ThumbsPipeline().extract_all()
+        count = ThumbsPipeline(
+            max_retries=settings.max_retries,
+            thumbnail_interval=settings.thumbnail_interval,
+            thumbnail_dir=Path(settings.thumbnail_dir),
+        ).extract_all()
         click.echo(f"Extracted thumbnails from {count} videos.")
 
 
@@ -96,7 +142,15 @@ def thumbs_cmd() -> None:
 def upload_cmd() -> None:
     """Google Driveへアップロードする."""
     with acquire_lock():
-        count = UploadPipeline().upload_all()
+        gdrive_provider = GoogleDriveProvider(
+            credentials_path=settings.gdrive_credentials_path
+        )
+        count = UploadPipeline(
+            max_retries=settings.max_retries,
+            gdrive_provider=gdrive_provider,
+            gdrive_root_folder_id=settings.gdrive_root_folder_id,
+            thumbnail_dir=Path(settings.thumbnail_dir),
+        ).upload_all()
         click.echo(f"Uploaded {count} videos.")
 
 
@@ -104,7 +158,11 @@ def upload_cmd() -> None:
 def cleanup_cmd() -> None:
     """ローカルファイルを削除する."""
     with acquire_lock():
-        count = CleanupPipeline().cleanup_all()
+        count = CleanupPipeline(
+            max_retries=settings.max_retries,
+            download_dir=Path(settings.download_dir),
+            thumbnail_dir=Path(settings.thumbnail_dir),
+        ).cleanup_all()
         click.echo(f"Cleaned up {count} videos.")
 
 
@@ -112,7 +170,9 @@ def cleanup_cmd() -> None:
 def recover_cmd() -> None:
     """中断されたストリームを回復する."""
     with acquire_lock():
-        count = RecoverPipeline().recover_streams()
+        count = RecoverPipeline(
+            max_retries=settings.max_retries,
+        ).recover_streams()
         click.echo(f"Recovered {count} streams.")
 
 
@@ -124,7 +184,10 @@ def download_one(video_id: str) -> None:
     VIDEO_ID: YouTube動画ID
     """
     with acquire_lock():
-        success = DownloadPipeline().download_video(video_id)
+        success = DownloadPipeline(
+            max_retries=settings.max_retries,
+            download_dir=Path(settings.download_dir),
+        ).download_video(video_id)
         if success:
             click.echo(f"Downloaded {video_id}")
         else:
@@ -145,7 +208,15 @@ def upload_one(video_id: str) -> None:
         raise SystemExit(1)
 
     with acquire_lock():
-        success = UploadPipeline().upload_video(video_id, stream.local_path)
+        gdrive_provider = GoogleDriveProvider(
+            credentials_path=settings.gdrive_credentials_path
+        )
+        success = UploadPipeline(
+            max_retries=settings.max_retries,
+            gdrive_provider=gdrive_provider,
+            gdrive_root_folder_id=settings.gdrive_root_folder_id,
+            thumbnail_dir=Path(settings.thumbnail_dir),
+        ).upload_video(video_id, stream.local_path)
         if success:
             click.echo(f"Uploaded {video_id}")
         else:

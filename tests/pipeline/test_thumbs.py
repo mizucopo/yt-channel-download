@@ -15,15 +15,11 @@ def setup_test_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """テスト用データベースをセットアップする."""
     test_db_path = str(tmp_path / "test.db")
     monkeypatch.setattr("src.config.settings.database_path", test_db_path)
-    monkeypatch.setattr(
-        "src.config.settings.thumbnail_dir", str(tmp_path / "thumbnails")
-    )
-    monkeypatch.setattr("src.config.settings.thumbnail_interval", 60)
     monkeypatch.setattr("src.config.settings.max_retries", 3)
     db.init_db()
 
 
-def test_extract_thumbnails_updates_status_on_success() -> None:
+def test_extract_thumbnails_updates_status_on_success(tmp_path: Path) -> None:
     """extract_thumbnailsが成功時にステータスを更新すること.
 
     Arrange:
@@ -50,9 +46,15 @@ def test_extract_thumbnails_updates_status_on_success() -> None:
     mock_result.returncode = 0
     mock_result.stderr = ""
 
+    thumbnail_dir = tmp_path / "thumbnails"
+
     with patch("subprocess.run", return_value=mock_result):
         # Act
-        success = ThumbsPipeline().extract_thumbnails("video1", "/path/to/video.mp4")
+        success = ThumbsPipeline(
+            max_retries=3,
+            thumbnail_interval=60,
+            thumbnail_dir=thumbnail_dir,
+        ).extract_thumbnails("video1", "/path/to/video.mp4")
 
     # Assert
     assert success is True
@@ -61,7 +63,7 @@ def test_extract_thumbnails_updates_status_on_success() -> None:
     assert result.status == "thumbs_done"
 
 
-def test_extract_thumbnails_reverts_status_on_failure() -> None:
+def test_extract_thumbnails_reverts_status_on_failure(tmp_path: Path) -> None:
     """extract_thumbnailsが失敗時にステータスを元に戻すこと.
 
     Arrange:
@@ -88,9 +90,15 @@ def test_extract_thumbnails_reverts_status_on_failure() -> None:
     mock_result.returncode = 1
     mock_result.stderr = "FFmpeg error"
 
+    thumbnail_dir = tmp_path / "thumbnails"
+
     with patch("subprocess.run", return_value=mock_result):
         # Act
-        success = ThumbsPipeline().extract_thumbnails("video1", "/path/to/video.mp4")
+        success = ThumbsPipeline(
+            max_retries=3,
+            thumbnail_interval=60,
+            thumbnail_dir=thumbnail_dir,
+        ).extract_thumbnails("video1", "/path/to/video.mp4")
 
     # Assert
     assert success is False

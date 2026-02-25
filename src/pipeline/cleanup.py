@@ -8,7 +8,6 @@ import shutil
 from pathlib import Path
 
 from src import db
-from src.config import settings
 from src.utils.paths import get_thumbnail_dir
 
 logger = logging.getLogger(__name__)
@@ -17,15 +16,22 @@ logger = logging.getLogger(__name__)
 class CleanupPipeline:
     """ローカルファイルクリーンアップパイプライン."""
 
-    def __init__(self, max_retries: int | None = None) -> None:
+    def __init__(
+        self,
+        max_retries: int,
+        download_dir: Path,
+        thumbnail_dir: Path,
+    ) -> None:
         """パイプラインを初期化する.
 
         Args:
-            max_retries: 最大リトライ回数（Noneの場合は設定値を使用）
+            max_retries: 最大リトライ回数
+            download_dir: ダウンロードディレクトリ
+            thumbnail_dir: サムネイルディレクトリ
         """
-        self._max_retries = (
-            max_retries if max_retries is not None else settings.max_retries
-        )
+        self._max_retries = max_retries
+        self._download_dir = download_dir
+        self._thumbnail_dir = thumbnail_dir
 
     def cleanup_video(self, video_id: str, local_path: str) -> bool:
         """動画とサムネイルをローカルから削除する.
@@ -55,7 +61,7 @@ class CleanupPipeline:
                 logger.info("Deleted video file: %s", local_path)
 
             # サムネイルディレクトリを削除
-            thumb_dir = get_thumbnail_dir(video_id)
+            thumb_dir = get_thumbnail_dir(video_id, self._thumbnail_dir)
             if thumb_dir.exists():
                 shutil.rmtree(thumb_dir)
                 logger.info("Deleted thumbnail directory: %s", thumb_dir)
