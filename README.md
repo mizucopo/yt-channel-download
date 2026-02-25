@@ -49,6 +49,7 @@ uv sync
 | `GDRIVE_ROOT_FOLDER_ID` | Google DriveルートフォルダID | （必須） |
 | `THUMBNAIL_INTERVAL` | サムネイル抽出間隔（秒） | `60` |
 | `MAX_RETRIES` | 最大リトライ回数 | `3` |
+| `LOCK_STALE_HOURS` | ロックファイルの有効期限（時間） | `3` |
 
 ## 使用方法
 
@@ -82,6 +83,21 @@ python -m src.main upload-one VIDEO_ID
 ```bash
 # 詳細ログを有効にする
 python -m src.main -v run
+```
+
+## ロック機能
+
+二重起動防止のためのファイルロック機能を備えています。
+
+- **ロックファイル**: `{DOWNLOAD_DIR}/.app.lock`
+- **動作**:
+  - ロックファイルが存在し、`LOCK_STALE_HOURS`時間以内 → プログラム終了（他のインスタンスが実行中）
+  - ロックファイルが存在し、`LOCK_STALE_HOURS`時間経過 → RuntimeError（古いロックファイルの検出）
+  - ロックファイルなし → ロックを取得して処理続行
+
+```bash
+# ロックファイルを手動で削除
+python -m src.main unlock
 ```
 
 ## テスト

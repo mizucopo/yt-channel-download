@@ -50,8 +50,12 @@ def _get_repository() -> StreamRepository:
 @contextmanager
 def _acquire_lock() -> Iterator[None]:
     """ロックを取得するコンテキストマネージャ."""
+    settings = _get_settings()
     path_manager = _get_path_manager()
-    lock_manager = LockManager(lock_dir=path_manager.download_dir)
+    lock_manager = LockManager(
+        lock_dir=path_manager.download_dir,
+        stale_hours=settings.lock_stale_hours,
+    )
     with lock_manager.acquire():
         yield
 

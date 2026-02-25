@@ -1,5 +1,6 @@
 """ファイルロックユーティリティのテスト."""
 
+import time
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,7 @@ def test_acquire_lock_prevents_concurrent_access(tmp_path: Path) -> None:
         同じロックを再度取得しようとする。
 
     Assert:
-        RuntimeErrorが発生すること。
+        SystemExit(0)が発生すること。
     """
     # Arrange
     lock_manager = LockManager(lock_dir=tmp_path)
@@ -26,7 +27,7 @@ def test_acquire_lock_prevents_concurrent_access(tmp_path: Path) -> None:
 
     try:
         # Act & Assert
-        with pytest.raises(RuntimeError, match="Another instance"):
+        with pytest.raises(SystemExit, match="0"):
             lock_manager.acquire().__enter__()
     finally:
         cm.__exit__(None, None, None)
@@ -53,4 +54,56 @@ def test_acquire_lock_releases_on_exit(tmp_path: Path) -> None:
 
     # Assert - should not raise
     with lock_manager.acquire():
+        pass
+
+
+def test_acquire_lock_raises_error_on_stale_file(tmp_path: Path) -> None:
+    """古いロックファイルがある場合にRuntimeErrorが発生すること.
+
+    Arrange:
+        stale_hours=0を設定して、即座に古いと判定されるようにする。
+        ロックファイルを作成する。
+
+    Act:
+        ロックを取得しようとする。
+
+    Assert:
+        RuntimeErrorが発生すること。
+    """
+    # Arrange
+    lock_manager = LockManager(lock_dir=tmp_path, stale_hours=0)
+    lock_path = tmp_path / ".app.lock"
+    lock_path.touch()
+
+    # 少し待機してファイルのmtimeが確実に古くなるようにする
+    time.sleep(0.1)
+
+    # Act & Assert
+    with (
+        pytest.raises(RuntimeError, match="Stale lock file detected"),
+        lock_manager.acquire(),
+    ):
+        pass
+
+
+def test_acquire_lock_removes_stale_file(tmp_path: Path) -> None:
+    """新しいロックファイルがある場合はSystemExitすること.
+
+    Arrange:
+        stale_hours=1を設定する。
+        ロックファイルを作成する。
+
+    Act:
+        ロックを取得しようとする。
+
+    Assert:
+        SystemExit(0)が発生すること。
+    """
+    # Arrange
+    lock_manager = LockManager(lock_dir=tmp_path, stale_hours=1)
+    lock_path = tmp_path / ".app.lock"
+    lock_path.touch()
+
+    # Act & Assert
+    with pytest.raises(SystemExit, match="0"), lock_manager.acquire():
         pass

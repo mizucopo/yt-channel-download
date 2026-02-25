@@ -34,6 +34,9 @@ class Settings(BaseModel):
     thumbnail_interval: int = config("THUMBNAIL_INTERVAL", default=60, cast=int)
     max_retries: int = config("MAX_RETRIES", default=3, cast=int)
 
+    # ロック設定
+    lock_stale_hours: int = config("LOCK_STALE_HOURS", default=3, cast=int)
+
     @field_validator("youtube_channel_ids", mode="before")
     @classmethod
     def _parse_channel_ids(cls, value: str) -> list[str]:

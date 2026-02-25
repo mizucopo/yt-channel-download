@@ -5,6 +5,7 @@
 
 import fcntl
 import os
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from pathlib import Path
@@ -13,33 +14,68 @@ from pathlib import Path
 class LockManager:
     """ファイルロック管理クラス."""
 
-    def __init__(self, lock_dir: Path, lock_filename: str = ".app.lock") -> None:
+    def __init__(
+        self,
+        lock_dir: Path,
+        lock_filename: str = ".app.lock",
+        stale_hours: int = 3,
+    ) -> None:
         """ロックマネージャを初期化する.
 
         Args:
             lock_dir: ロックファイルを配置するディレクトリ
             lock_filename: ロックファイル名
+            stale_hours: ロックファイルが古いと判断する時間（時間単位）
         """
         self._lock_path = lock_dir / lock_filename
+        self._stale_hours = stale_hours
 
     @property
     def lock_path(self) -> Path:
         """ロックファイルのパスを取得する."""
         return self._lock_path
 
+    def _is_stale(self) -> bool:
+        """ロックファイルが古いかどうかを確認する.
+
+        Returns:
+            ロックファイルの更新時刻がstale_hours時間以上前の場合はTrue
+        """
+        if not self._lock_path.exists():
+            return False
+
+        try:
+            mtime = self._lock_path.stat().st_mtime
+            age_hours = (time.time() - mtime) / 3600
+            return age_hours >= self._stale_hours
+        except OSError:
+            return False
+
     @contextmanager
     def acquire(self) -> Iterator[None]:
         """アプリケーションロックを取得する.
 
         ロックファイルを作成し、排他ロックを取得する。
-        既にロックされている場合はRuntimeErrorを発生させる。
+        古いロックファイル（stale_hours時間以上前）が存在する場合はRuntimeErrorを発生させる。
+        新しいロックファイルが存在する場合は、ロックを取得せずに終了する。
 
         Yields:
             None
 
         Raises:
-            RuntimeError: 既にロックされている場合
+            RuntimeError: 古いロックファイルが存在する場合
         """
+        # 古いロックファイルの場合はエラー
+        if self._is_stale():
+            raise RuntimeError(
+                f"Stale lock file detected (older than {self._stale_hours} hours): "
+                f"{self._lock_path}"
+            )
+
+        # ロックファイルが存在する場合は終了
+        if self._lock_path.exists():
+            raise SystemExit(0)
+
         self._lock_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(self._lock_path, "w") as lock_file:
