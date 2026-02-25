@@ -47,7 +47,7 @@ def test_discover_videos_registers_new_videos() -> None:
     count = DiscoverPipeline(
         client=mock_client,
         channel_ids=["channel1"],
-    ).discover_videos()
+    ).discover_all()
 
     # Assert
     assert count == 1
@@ -88,7 +88,7 @@ def test_discover_videos_skips_existing_videos() -> None:
     count = DiscoverPipeline(
         client=mock_client,
         channel_ids=["channel1"],
-    ).discover_videos()
+    ).discover_all()
 
     # Assert
     assert count == 0

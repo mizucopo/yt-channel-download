@@ -21,7 +21,7 @@ class RecoverPipeline:
         """
         self._max_retries = max_retries
 
-    def recover_streams(self) -> int:
+    def recover_all(self) -> int:
         """中断されたストリームを回復する.
 
         downloading -> discovered: ダウンロードを再試行

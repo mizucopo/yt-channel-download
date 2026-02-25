@@ -30,7 +30,7 @@ class DiscoverPipeline:
         self._client = client
         self._channel_ids = channel_ids
 
-    def discover_videos(self) -> int:
+    def discover_all(self) -> int:
         """新しいライブアーカイブを検出して登録する.
 
         Returns:

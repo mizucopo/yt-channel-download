@@ -36,7 +36,7 @@ def test_recover_streams_reverts_downloading_to_discovered() -> None:
     )
 
     # Act
-    count = RecoverPipeline(max_retries=3).recover_streams()
+    count = RecoverPipeline(max_retries=3).recover_all()
 
     # Assert
     assert count == 1
@@ -61,7 +61,7 @@ def test_recover_streams_reverts_uploading_to_thumbs_done() -> None:
     db.insert_stream(Stream(video_id="video1", status="uploading", title="Test Video"))
 
     # Act
-    count = RecoverPipeline(max_retries=3).recover_streams()
+    count = RecoverPipeline(max_retries=3).recover_all()
 
     # Assert
     assert count == 1
@@ -96,7 +96,7 @@ def test_recover_streams_respects_max_retries() -> None:
         )
 
     # Act
-    count = RecoverPipeline(max_retries=3).recover_streams()
+    count = RecoverPipeline(max_retries=3).recover_all()
 
     # Assert
     assert count == 0

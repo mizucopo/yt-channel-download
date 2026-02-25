@@ -71,7 +71,7 @@ def test_full_pipeline_processes_video_from_discovery_to_cleanup(
     count = DiscoverPipeline(
         client=mock_yt_client,
         channel_ids=["channel1"],
-    ).discover_videos()
+    ).discover_all()
     assert count == 1
 
     result = db.get_stream("video1")

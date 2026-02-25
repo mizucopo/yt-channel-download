@@ -65,7 +65,7 @@ def run() -> None:
         discovered = DiscoverPipeline(
             client=youtube_client,
             channel_ids=settings.youtube_channel_ids,
-        ).discover_videos()
+        ).discover_all()
         click.echo(f"  Discovered: {discovered} new videos")
 
         click.echo("Downloading videos...")
@@ -111,7 +111,7 @@ def discover_cmd() -> None:
         count = DiscoverPipeline(
             client=youtube_client,
             channel_ids=settings.youtube_channel_ids,
-        ).discover_videos()
+        ).discover_all()
         click.echo(f"Discovered {count} new videos.")
 
 
@@ -172,7 +172,7 @@ def recover_cmd() -> None:
     with acquire_lock():
         count = RecoverPipeline(
             max_retries=settings.max_retries,
-        ).recover_streams()
+        ).recover_all()
         click.echo(f"Recovered {count} streams.")
 
 
