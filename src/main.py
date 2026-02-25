@@ -32,7 +32,7 @@ class Main:
 
     def __init__(self) -> None:
         """アプリケーションを初期化する."""
-        self._settings = Settings()
+        self._settings = Settings.from_env()
         self._path_manager = PathManager(
             download_dir=Path(self._settings.download_dir),
             thumbnail_dir=Path(self._settings.thumbnail_dir),
