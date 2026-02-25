@@ -221,6 +221,7 @@ class Main:
             repository = self.get_repository()
             count = RecoverPipeline(
                 max_retries=self._settings.max_retries,
+                thumbnail_dir=self._path_manager.thumbnail_dir,
                 repository=repository,
             ).recover_all()
             click.echo(f"Recovered {count} streams.")
@@ -291,95 +292,99 @@ class Main:
         lock_manager.release()
         click.echo(f"Removed lock file: {lock_manager.lock_path}")
 
-    @staticmethod
-    @click.group()
-    @click.option("-v", "--verbose", is_flag=True, help="詳細ログを有効にする")
-    @click.pass_context
-    def cli(ctx: click.Context, verbose: bool) -> None:
-        """YouTube Live Archive Downloader.
 
-        YouTubeライブアーカイブを自動的にダウンロードし、
-        Google Driveへアップロードする。
-        """
-        app = Main()
-        app.initialize(verbose)
-        ctx.obj = app
+@click.group()
+@click.option("-v", "--verbose", is_flag=True, help="詳細ログを有効にする")
+@click.pass_context
+def cli(ctx: click.Context, verbose: bool) -> None:
+    """YouTube Live Archive Downloader.
 
-    @classmethod
-    def register_commands(cls) -> None:
-        """CLIコマンドを登録する."""
-        cls.cli.command()(cls._run)
-        cls.cli.command("discover-cmd")(cls._discover_cmd)
-        cls.cli.command("download-cmd")(cls._download_cmd)
-        cls.cli.command("thumbs-cmd")(cls._thumbs_cmd)
-        cls.cli.command("upload-cmd")(cls._upload_cmd)
-        cls.cli.command("cleanup-cmd")(cls._cleanup_cmd)
-        cls.cli.command("recover-cmd")(cls._recover_cmd)
-        cls.cli.command("download-one")(cls._download_one)
-        cls.cli.command("upload-one")(cls._upload_one)
-        cls.cli.command("status")(cls._status)
-        cls.cli.command("unlock")(cls._unlock)
-
-    @staticmethod
-    @click.pass_obj
-    def _run(app: "Main") -> None:
-        app.run()
-
-    @staticmethod
-    @click.pass_obj
-    def _discover_cmd(app: "Main") -> None:
-        app.discover_cmd()
-
-    @staticmethod
-    @click.pass_obj
-    def _download_cmd(app: "Main") -> None:
-        app.download_cmd()
-
-    @staticmethod
-    @click.pass_obj
-    def _thumbs_cmd(app: "Main") -> None:
-        app.thumbs_cmd()
-
-    @staticmethod
-    @click.pass_obj
-    def _upload_cmd(app: "Main") -> None:
-        app.upload_cmd()
-
-    @staticmethod
-    @click.pass_obj
-    def _cleanup_cmd(app: "Main") -> None:
-        app.cleanup_cmd()
-
-    @staticmethod
-    @click.pass_obj
-    def _recover_cmd(app: "Main") -> None:
-        app.recover_cmd()
-
-    @staticmethod
-    @click.argument("video_id")
-    @click.pass_obj
-    def _download_one(app: "Main", video_id: str) -> None:
-        app.download_one(video_id)
-
-    @staticmethod
-    @click.argument("video_id")
-    @click.pass_obj
-    def _upload_one(app: "Main", video_id: str) -> None:
-        app.upload_one(video_id)
-
-    @staticmethod
-    @click.pass_obj
-    def _status(app: "Main") -> None:
-        app.status()
-
-    @staticmethod
-    @click.pass_obj
-    def _unlock(app: "Main") -> None:
-        app.unlock()
+    YouTubeライブアーカイブを自動的にダウンロードし、
+    Google Driveへアップロードする。
+    """
+    app = Main()
+    app.initialize(verbose)
+    ctx.obj = app
 
 
-Main.register_commands()
+@cli.command()
+@click.pass_obj
+def run(app: Main) -> None:
+    """全パイプラインを実行する."""
+    app.run()
+
+
+@cli.command("discover-cmd")
+@click.pass_obj
+def discover_cmd(app: Main) -> None:
+    """新しいライブアーカイブを検出する."""
+    app.discover_cmd()
+
+
+@cli.command("download-cmd")
+@click.pass_obj
+def download_cmd(app: Main) -> None:
+    """待機中の動画をダウンロードする."""
+    app.download_cmd()
+
+
+@cli.command("thumbs-cmd")
+@click.pass_obj
+def thumbs_cmd(app: Main) -> None:
+    """サムネイルを抽出する."""
+    app.thumbs_cmd()
+
+
+@cli.command("upload-cmd")
+@click.pass_obj
+def upload_cmd(app: Main) -> None:
+    """Google Driveへアップロードする."""
+    app.upload_cmd()
+
+
+@cli.command("cleanup-cmd")
+@click.pass_obj
+def cleanup_cmd(app: Main) -> None:
+    """ローカルファイルを削除する."""
+    app.cleanup_cmd()
+
+
+@cli.command("recover-cmd")
+@click.pass_obj
+def recover_cmd(app: Main) -> None:
+    """中断されたストリームを回復する."""
+    app.recover_cmd()
+
+
+@cli.command("download-one")
+@click.argument("video_id")
+@click.pass_obj
+def download_one(app: Main, video_id: str) -> None:
+    """指定された動画をダウンロードする."""
+    app.download_one(video_id)
+
+
+@cli.command("upload-one")
+@click.argument("video_id")
+@click.pass_obj
+def upload_one(app: Main, video_id: str) -> None:
+    """指定された動画をアップロードする."""
+    app.upload_one(video_id)
+
+
+@cli.command()
+@click.pass_obj
+def status(app: Main) -> None:
+    """現在のステータスを表示する."""
+    app.status()
+
+
+@cli.command()
+@click.pass_obj
+def unlock(app: Main) -> None:
+    """ロックファイルを削除する."""
+    app.unlock()
 
 
 if __name__ == "__main__":
-    Main.cli()
+    cli()

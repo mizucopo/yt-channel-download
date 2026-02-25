@@ -55,8 +55,11 @@ class Settings(BaseModel):
 
         Returns:
             設定オブジェクト
+
+        Raises:
+            ValidationError: 必須設定が不足している場合
         """
-        return cls(
+        instance = cls(
             youtube_api_key=config("YOUTUBE_API_KEY", default=""),
             youtube_channel_ids=cls._parse_channel_ids(
                 config("YOUTUBE_CHANNEL_IDS", default="")
@@ -72,3 +75,18 @@ class Settings(BaseModel):
             max_retries=config("MAX_RETRIES", default=3, cast=int),
             lock_stale_hours=config("LOCK_STALE_HOURS", default=3, cast=int),
         )
+
+        # 必須設定の検証
+        missing: list[str] = []
+        if not instance.youtube_api_key:
+            missing.append("YOUTUBE_API_KEY")
+        if not instance.youtube_channel_ids:
+            missing.append("YOUTUBE_CHANNEL_IDS")
+        if not instance.gdrive_root_folder_id:
+            missing.append("GDRIVE_ROOT_FOLDER_ID")
+
+        if missing:
+            missing_str = ", ".join(missing)
+            raise ValueError(f"必須の環境変数が設定されていません: {missing_str}")
+
+        return instance
