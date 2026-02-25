@@ -8,6 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "mizu-common-py",
 ]
 
 [dependency-groups]
@@ -57,3 +58,6 @@ test = "ruff check --fix src tests stubs && ruff format src tests stubs && mypy 
 
 [tool.uv]
 package = true
+
+[tool.uv.sources]
+mizu-common-py = { git = "https://github.com/mizucopo/mizu-common-py.git" }
