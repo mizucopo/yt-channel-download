@@ -6,7 +6,8 @@ Clickベースのコマンドラインインターフェースを提供する。
 import click
 
 from src import db
-from src.pipeline import cleanup, discover, download, recover, thumbs, upload
+from src.pipeline import discover, download, recover, thumbs, upload
+from src.pipeline.cleanup import CleanupPipeline
 from src.utils.locking import acquire_lock
 from src.utils.logging import setup_logging
 from src.utils.paths import ensure_directories
@@ -57,7 +58,7 @@ def run() -> None:
         click.echo(f"  Uploaded: {uploaded} videos")
 
         click.echo("Cleaning up local files...")
-        cleaned = cleanup.cleanup_all()
+        cleaned = CleanupPipeline().cleanup_all()
         click.echo(f"  Cleaned: {cleaned} videos")
 
         click.echo("Pipeline completed.")
@@ -99,7 +100,7 @@ def upload_cmd() -> None:
 def cleanup_cmd() -> None:
     """ローカルファイルを削除する."""
     with acquire_lock():
-        count = cleanup.cleanup_all()
+        count = CleanupPipeline().cleanup_all()
         click.echo(f"Cleaned up {count} videos.")
 
 

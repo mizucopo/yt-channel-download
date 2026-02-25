@@ -6,7 +6,7 @@ import pytest
 
 from src import db
 from src.models.stream import Stream
-from src.pipeline import cleanup
+from src.pipeline.cleanup import CleanupPipeline
 
 
 @pytest.fixture(autouse=True)
@@ -54,7 +54,7 @@ def test_cleanup_video_deletes_files(tmp_path: Path) -> None:
     )
 
     # Act
-    success = cleanup.cleanup_video("video1", str(video_path))
+    success = CleanupPipeline().cleanup_video("video1", str(video_path))
 
     # Assert
     assert success is True
@@ -89,7 +89,7 @@ def test_cleanup_video_handles_missing_files() -> None:
     )
 
     # Act
-    success = cleanup.cleanup_video("video1", "/nonexistent/video.mp4")
+    success = CleanupPipeline().cleanup_video("video1", "/nonexistent/video.mp4")
 
     # Assert
     assert success is True

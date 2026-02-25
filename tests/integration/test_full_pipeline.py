@@ -43,7 +43,8 @@ def test_full_pipeline_flow(tmp_path: Path) -> None:
     from datetime import datetime, timezone
 
     from src.models.video_info import VideoInfo
-    from src.pipeline import cleanup, discover, download, thumbs, upload
+    from src.pipeline import discover, download, thumbs, upload
+    from src.pipeline.cleanup import CleanupPipeline
 
     # Mock YouTube client
     mock_yt_client = Mock()
@@ -116,7 +117,7 @@ def test_full_pipeline_flow(tmp_path: Path) -> None:
     assert result.status == "uploaded"
 
     # Act & Assert - Cleanup
-    success = cleanup.cleanup_video("video1", str(video_path))
+    success = CleanupPipeline().cleanup_video("video1", str(video_path))
     assert success is True
 
     result = db.get_stream("video1")
