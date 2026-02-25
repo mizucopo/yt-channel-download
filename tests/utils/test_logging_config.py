@@ -3,7 +3,7 @@
 import logging
 from io import StringIO
 
-from src.utils.logging import LoggingConfig
+from src.utils.logging_config import LoggingConfig
 
 
 def test_setup_logging_configures_root_logger() -> None:

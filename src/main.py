@@ -20,9 +20,9 @@ from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
 from src.settings import Settings
 from src.stream_repository import StreamRepository
-from src.utils.locking import LockManager
-from src.utils.logging import LoggingConfig
-from src.utils.paths import PathManager
+from src.utils.lock_manager import LockManager
+from src.utils.logging_config import LoggingConfig
+from src.utils.path_manager import PathManager
 from src.youtube_client import YouTubeClient
 
 

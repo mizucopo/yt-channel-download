@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.utils.locking import LockManager
+from src.utils.lock_manager import LockManager
 
 
 def test_acquire_lock_prevents_concurrent_access(tmp_path: Path) -> None:

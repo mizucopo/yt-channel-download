@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.utils.paths import PathManager
+from src.utils.path_manager import PathManager
 
 
 def test_get_download_path_returns_correct_path(tmp_path: Path) -> None:
