@@ -3,6 +3,8 @@
 環境変数から設定を読み込み、アプリケーション全体で使用する設定値を提供する。
 """
 
+from typing import Any
+
 from decouple import config
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -17,7 +19,7 @@ class Settings(BaseModel):
 
     # YouTube API設定
     youtube_api_key: str = config("YOUTUBE_API_KEY", default="")
-    youtube_channel_ids: str = config("YOUTUBE_CHANNEL_IDS", default="")
+    youtube_channel_ids: list[str] = []
 
     # パス設定
     database_path: str = config("DATABASE_PATH", default="data/streams.db")
@@ -39,15 +41,16 @@ class Settings(BaseModel):
 
     @field_validator("youtube_channel_ids", mode="before")
     @classmethod
-    def _parse_channel_ids(cls, value: str) -> list[str]:
+    def _parse_channel_ids(cls, _value: Any) -> list[str]:
         """チャンネルID文字列をパースする.
 
         Args:
-            value: カンマ区切りのチャンネルID文字列
+            _value: 使用しない（環境変数から直接読み込むため）
 
         Returns:
             チャンネルIDのリスト
         """
-        if not value:
+        raw = config("YOUTUBE_CHANNEL_IDS", default="")
+        if not raw:
             return []
-        return [v.strip() for v in value.split(",") if v.strip()]
+        return [v.strip() for v in raw.split(",") if v.strip()]

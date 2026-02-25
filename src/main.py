@@ -20,6 +20,7 @@ from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
 from src.settings import Settings
 from src.stream_repository import StreamRepository
+from src.utils.already_running_error import AlreadyRunningError
 from src.utils.lock_manager import LockManager
 from src.utils.logging_config import LoggingConfig
 from src.utils.path_manager import PathManager
@@ -59,8 +60,12 @@ class Main:
             lock_dir=self._path_manager.download_dir,
             stale_hours=self._settings.lock_stale_hours,
         )
-        with lock_manager.acquire():
-            yield
+        try:
+            with lock_manager.acquire():
+                yield
+        except AlreadyRunningError:
+            click.echo("Another instance is already running. Exiting.")
+            raise SystemExit(0) from None
 
     def get_lock_manager(self) -> LockManager:
         """ロックマネージャを取得する."""

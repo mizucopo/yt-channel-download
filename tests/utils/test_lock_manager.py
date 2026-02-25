@@ -5,7 +5,9 @@ from pathlib import Path
 
 import pytest
 
+from src.utils.already_running_error import AlreadyRunningError
 from src.utils.lock_manager import LockManager
+from src.utils.stale_lock_error import StaleLockError
 
 
 def test_acquire_lock_prevents_concurrent_access(tmp_path: Path) -> None:
@@ -18,7 +20,7 @@ def test_acquire_lock_prevents_concurrent_access(tmp_path: Path) -> None:
         同じロックを再度取得しようとする。
 
     Assert:
-        SystemExit(0)が発生すること。
+        AlreadyRunningErrorが発生すること。
     """
     # Arrange
     lock_manager = LockManager(lock_dir=tmp_path)
@@ -27,7 +29,7 @@ def test_acquire_lock_prevents_concurrent_access(tmp_path: Path) -> None:
 
     try:
         # Act & Assert
-        with pytest.raises(SystemExit, match="0"):
+        with pytest.raises(AlreadyRunningError):
             lock_manager.acquire().__enter__()
     finally:
         cm.__exit__(None, None, None)
@@ -58,7 +60,7 @@ def test_acquire_lock_releases_on_exit(tmp_path: Path) -> None:
 
 
 def test_acquire_lock_raises_error_on_stale_file(tmp_path: Path) -> None:
-    """古いロックファイルがある場合にRuntimeErrorが発生すること.
+    """古いロックファイルがある場合にStaleLockErrorが発生すること.
 
     Arrange:
         stale_hours=0を設定して、即座に古いと判定されるようにする。
@@ -68,7 +70,7 @@ def test_acquire_lock_raises_error_on_stale_file(tmp_path: Path) -> None:
         ロックを取得しようとする。
 
     Assert:
-        RuntimeErrorが発生すること。
+        StaleLockErrorが発生すること。
     """
     # Arrange
     lock_manager = LockManager(lock_dir=tmp_path, stale_hours=0)
@@ -80,14 +82,14 @@ def test_acquire_lock_raises_error_on_stale_file(tmp_path: Path) -> None:
 
     # Act & Assert
     with (
-        pytest.raises(RuntimeError, match="Stale lock file detected"),
+        pytest.raises(StaleLockError, match="Stale lock file detected"),
         lock_manager.acquire(),
     ):
         pass
 
 
-def test_acquire_lock_removes_stale_file(tmp_path: Path) -> None:
-    """新しいロックファイルがある場合はSystemExitすること.
+def test_acquire_lock_raises_error_on_recent_file(tmp_path: Path) -> None:
+    """新しいロックファイルがある場合はAlreadyRunningErrorすること.
 
     Arrange:
         stale_hours=1を設定する。
@@ -97,7 +99,7 @@ def test_acquire_lock_removes_stale_file(tmp_path: Path) -> None:
         ロックを取得しようとする。
 
     Assert:
-        SystemExit(0)が発生すること。
+        AlreadyRunningErrorが発生すること。
     """
     # Arrange
     lock_manager = LockManager(lock_dir=tmp_path, stale_hours=1)
@@ -105,5 +107,8 @@ def test_acquire_lock_removes_stale_file(tmp_path: Path) -> None:
     lock_path.touch()
 
     # Act & Assert
-    with pytest.raises(SystemExit, match="0"), lock_manager.acquire():
+    with (
+        pytest.raises(AlreadyRunningError, match="Another instance"),
+        lock_manager.acquire(),
+    ):
         pass

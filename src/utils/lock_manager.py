@@ -10,6 +10,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from pathlib import Path
 
+from src.utils.already_running_error import AlreadyRunningError
+from src.utils.stale_lock_error import StaleLockError
+
 
 class LockManager:
     """ファイルロック管理クラス."""
@@ -56,25 +59,29 @@ class LockManager:
         """アプリケーションロックを取得する.
 
         ロックファイルを作成し、排他ロックを取得する。
-        古いロックファイル（stale_hours時間以上前）が存在する場合はRuntimeErrorを発生させる。
-        新しいロックファイルが存在する場合は、ロックを取得せずに終了する。
+        古いロックファイル（stale_hours時間以上前）が存在する場合は
+        StaleLockErrorを発生させる。
+        新しいロックファイルが存在する場合は、AlreadyRunningErrorを発生させる。
 
         Yields:
             None
 
         Raises:
-            RuntimeError: 古いロックファイルが存在する場合
+            StaleLockError: 古いロックファイルが存在する場合
+            AlreadyRunningError: 他のインスタンスが実行中の場合
         """
         # 古いロックファイルの場合はエラー
         if self._is_stale():
-            raise RuntimeError(
+            raise StaleLockError(
                 f"Stale lock file detected (older than {self._stale_hours} hours): "
                 f"{self._lock_path}"
             )
 
-        # ロックファイルが存在する場合は終了
+        # ロックファイルが存在する場合はエラー
         if self._lock_path.exists():
-            raise SystemExit(0)
+            raise AlreadyRunningError(
+                f"Another instance is already running. Lock file: {self._lock_path}"
+            )
 
         self._lock_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -83,7 +90,7 @@ class LockManager:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 yield
             except BlockingIOError as e:
-                raise RuntimeError("Another instance is already running") from e
+                raise AlreadyRunningError("Another instance is already running") from e
             finally:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
                 with suppress(OSError):
