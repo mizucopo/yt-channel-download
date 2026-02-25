@@ -6,8 +6,9 @@ Clickベースのコマンドラインインターフェースを提供する。
 import click
 
 from src import db
-from src.pipeline import discover, download, recover, thumbs, upload
+from src.pipeline import discover, recover, thumbs, upload
 from src.pipeline.cleanup import CleanupPipeline
+from src.pipeline.download import DownloadPipeline
 from src.utils.locking import acquire_lock
 from src.utils.logging import setup_logging
 from src.utils.paths import ensure_directories
@@ -46,7 +47,7 @@ def run() -> None:
         click.echo(f"  Discovered: {discovered} new videos")
 
         click.echo("Downloading videos...")
-        downloaded = download.download_all()
+        downloaded = DownloadPipeline().download_all()
         click.echo(f"  Downloaded: {downloaded} videos")
 
         click.echo("Extracting thumbnails...")
@@ -76,7 +77,7 @@ def discover_cmd() -> None:
 def download_cmd() -> None:
     """待機中の動画をダウンロードする."""
     with acquire_lock():
-        count = download.download_all()
+        count = DownloadPipeline().download_all()
         click.echo(f"Downloaded {count} videos.")
 
 
@@ -120,7 +121,7 @@ def download_one(video_id: str) -> None:
     VIDEO_ID: YouTube動画ID
     """
     with acquire_lock():
-        success = download.download_video(video_id)
+        success = DownloadPipeline().download_video(video_id)
         if success:
             click.echo(f"Downloaded {video_id}")
         else:

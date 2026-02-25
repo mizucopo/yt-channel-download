@@ -43,8 +43,9 @@ def test_full_pipeline_flow(tmp_path: Path) -> None:
     from datetime import datetime, timezone
 
     from src.models.video_info import VideoInfo
-    from src.pipeline import discover, download, thumbs, upload
+    from src.pipeline import discover, thumbs, upload
     from src.pipeline.cleanup import CleanupPipeline
+    from src.pipeline.download import DownloadPipeline
 
     # Mock YouTube client
     mock_yt_client = Mock()
@@ -89,7 +90,7 @@ def test_full_pipeline_flow(tmp_path: Path) -> None:
         patch("subprocess.run", return_value=mock_download_result),
         patch("src.pipeline.download.get_download_path", return_value=video_path),
     ):
-        success = download.download_video("video1")
+        success = DownloadPipeline().download_video("video1")
     assert success is True
 
     result = db.get_stream("video1")

@@ -7,7 +7,7 @@ import pytest
 
 from src import db
 from src.models.stream import Stream
-from src.pipeline import download
+from src.pipeline.download import DownloadPipeline
 
 
 @pytest.fixture(autouse=True)
@@ -42,7 +42,7 @@ def test_download_video_updates_status_on_success() -> None:
 
     with patch("subprocess.run", return_value=mock_result):
         # Act
-        success = download.download_video("video1")
+        success = DownloadPipeline().download_video("video1")
 
     # Assert
     assert success is True
@@ -73,7 +73,7 @@ def test_download_video_reverts_status_on_failure() -> None:
 
     with patch("subprocess.run", return_value=mock_result):
         # Act
-        success = download.download_video("video1")
+        success = DownloadPipeline().download_video("video1")
 
     # Assert
     assert success is False
@@ -100,7 +100,7 @@ def test_download_video_fails_on_cas_mismatch() -> None:
     db.insert_stream(Stream(video_id="video1", status="downloaded", title="Test Video"))
 
     # Act
-    success = download.download_video("video1")
+    success = DownloadPipeline().download_video("video1")
 
     # Assert
     assert success is False
