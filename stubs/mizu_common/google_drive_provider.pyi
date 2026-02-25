@@ -3,7 +3,7 @@
 class GoogleDriveProvider:
     """Google Drive操作を提供するクラス."""
 
-    def __init__(self, credentials_path: str) -> None: ...
+    def __init__(self, oauth_client_id: str, refresh_token: str) -> None: ...
     def upload_file(
         self,
         file_path: str,

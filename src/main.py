@@ -78,7 +78,8 @@ class Main:
     def get_gdrive_provider(self) -> GoogleDriveProvider:
         """Google Driveプロバイダーを取得する."""
         return GoogleDriveProvider(
-            credentials_path=self._settings.gdrive_credentials_path
+            oauth_client_id=self._settings.gdrive_oauth_client_id,
+            refresh_token=self._settings.gdrive_refresh_token,
         )
 
     def initialize(self, verbose: bool) -> None:
