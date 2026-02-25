@@ -7,6 +7,7 @@ from unittest.mock import Mock
 import pytest
 
 from src import db
+from src.models.stream import Stream
 from src.pipeline import discover
 from src.yt_api import VideoInfo
 
@@ -73,7 +74,7 @@ def test_discover_videos_skips_existing_videos(
     """
     # Arrange
     db.insert_stream(
-        db.Stream(video_id="video1", status="downloaded", title="Existing Video")
+        Stream(video_id="video1", status="downloaded", title="Existing Video")
     )
 
     mock_client = Mock()

@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from src import db
+from src.models.stream import Stream
 
 
 @pytest.fixture(autouse=True)
@@ -32,7 +33,7 @@ def test_insert_stream_creates_new_record() -> None:
         get_stream()で取得したレコードが登録したデータと一致すること。
     """
     # Arrange
-    stream = db.Stream(
+    stream = Stream(
         video_id="test_video_id",
         status="discovered",
         title="Test Video",
@@ -82,9 +83,9 @@ def test_get_streams_by_status_returns_matching_records() -> None:
         指定したステータスのストリームのみが返されること。
     """
     # Arrange
-    db.insert_stream(db.Stream(video_id="video1", status="discovered", title="Video 1"))
-    db.insert_stream(db.Stream(video_id="video2", status="downloaded", title="Video 2"))
-    db.insert_stream(db.Stream(video_id="video3", status="discovered", title="Video 3"))
+    db.insert_stream(Stream(video_id="video1", status="discovered", title="Video 1"))
+    db.insert_stream(Stream(video_id="video2", status="downloaded", title="Video 2"))
+    db.insert_stream(Stream(video_id="video3", status="discovered", title="Video 3"))
 
     # Act
     result = db.get_streams_by_status("discovered")
@@ -110,9 +111,7 @@ def test_update_status_changes_status() -> None:
         ステータスが正しく更新されていること。
     """
     # Arrange
-    db.insert_stream(
-        db.Stream(video_id="video1", status="discovered", title="Test Video")
-    )
+    db.insert_stream(Stream(video_id="video1", status="discovered", title="Test Video"))
 
     # Act
     success = db.update_status("video1", "downloaded", expected_old_status="discovered")
@@ -137,9 +136,7 @@ def test_update_status_with_cas_fails_on_mismatch() -> None:
         更新が失敗し、ステータスが変更されないこと。
     """
     # Arrange
-    db.insert_stream(
-        db.Stream(video_id="video1", status="discovered", title="Test Video")
-    )
+    db.insert_stream(Stream(video_id="video1", status="discovered", title="Test Video"))
 
     # Act
     success = db.update_status("video1", "uploading", expected_old_status="downloaded")
@@ -164,9 +161,7 @@ def test_update_status_updates_local_path() -> None:
         両方のフィールドが正しく更新されていること。
     """
     # Arrange
-    db.insert_stream(
-        db.Stream(video_id="video1", status="discovered", title="Test Video")
-    )
+    db.insert_stream(Stream(video_id="video1", status="discovered", title="Test Video"))
 
     # Act
     success = db.update_status(
@@ -197,8 +192,8 @@ def test_get_next_pending_returns_oldest_record() -> None:
         最も古いレコードが返されること。
     """
     # Arrange
-    db.insert_stream(db.Stream(video_id="video1", status="discovered", title="Video 1"))
-    db.insert_stream(db.Stream(video_id="video2", status="discovered", title="Video 2"))
+    db.insert_stream(Stream(video_id="video1", status="discovered", title="Video 1"))
+    db.insert_stream(Stream(video_id="video2", status="discovered", title="Video 2"))
 
     # Act
     result = db.get_next_pending("discovered", max_retries=3)
@@ -221,8 +216,8 @@ def test_get_next_pending_respects_max_retries() -> None:
         リトライ回数が上限未満のストリームのみが返されること。
     """
     # Arrange
-    db.insert_stream(db.Stream(video_id="video1", status="discovered", title="Video 1"))
-    db.insert_stream(db.Stream(video_id="video2", status="discovered", title="Video 2"))
+    db.insert_stream(Stream(video_id="video1", status="discovered", title="Video 1"))
+    db.insert_stream(Stream(video_id="video2", status="discovered", title="Video 2"))
     # video1のリトライ回数を増やす
     db.update_status(
         "video1", "discovered", expected_old_status="discovered", increment_retry=True

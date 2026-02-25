@@ -7,6 +7,7 @@ import logging
 
 from src import db
 from src.config import settings
+from src.models.stream import Stream
 from src.yt_api import YouTubeClient
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ def discover_videos(client: YouTubeClient | None = None) -> int:
             if existing is not None:
                 continue
 
-            stream = db.Stream(
+            stream = Stream(
                 video_id=video.video_id,
                 status="discovered",
                 title=video.title,

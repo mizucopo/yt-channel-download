@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src import db
+from src.models.stream import Stream
 from src.pipeline import download
 
 
@@ -33,9 +34,7 @@ def test_download_video_updates_status_on_success() -> None:
         ステータスがdownloadedに更新されていること。
     """
     # Arrange
-    db.insert_stream(
-        db.Stream(video_id="video1", status="discovered", title="Test Video")
-    )
+    db.insert_stream(Stream(video_id="video1", status="discovered", title="Test Video"))
 
     mock_result = Mock()
     mock_result.returncode = 0
@@ -66,9 +65,7 @@ def test_download_video_reverts_status_on_failure() -> None:
         ステータスがdiscoveredに戻っていること。
     """
     # Arrange
-    db.insert_stream(
-        db.Stream(video_id="video1", status="discovered", title="Test Video")
-    )
+    db.insert_stream(Stream(video_id="video1", status="discovered", title="Test Video"))
 
     mock_result = Mock()
     mock_result.returncode = 1
@@ -100,9 +97,7 @@ def test_download_video_fails_on_cas_mismatch() -> None:
         Falseが返されること。
     """
     # Arrange
-    db.insert_stream(
-        db.Stream(video_id="video1", status="downloaded", title="Test Video")
-    )
+    db.insert_stream(Stream(video_id="video1", status="downloaded", title="Test Video"))
 
     # Act
     success = download.download_video("video1")

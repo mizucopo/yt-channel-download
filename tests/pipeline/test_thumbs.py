@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src import db
+from src.models.stream import Stream
 from src.pipeline import thumbs
 
 
@@ -37,7 +38,7 @@ def test_extract_thumbnails_updates_status_on_success() -> None:
     """
     # Arrange
     db.insert_stream(
-        db.Stream(
+        Stream(
             video_id="video1",
             status="downloaded",
             title="Test Video",
@@ -75,7 +76,7 @@ def test_extract_thumbnails_reverts_status_on_failure() -> None:
     """
     # Arrange
     db.insert_stream(
-        db.Stream(
+        Stream(
             video_id="video1",
             status="downloaded",
             title="Test Video",

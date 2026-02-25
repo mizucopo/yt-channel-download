@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from src import db
+from src.models.stream import Stream
 from src.pipeline import recover
 
 
@@ -31,7 +32,7 @@ def test_recover_streams_reverts_downloading_to_discovered() -> None:
     """
     # Arrange
     db.insert_stream(
-        db.Stream(video_id="video1", status="downloading", title="Test Video")
+        Stream(video_id="video1", status="downloading", title="Test Video")
     )
 
     # Act
@@ -57,9 +58,7 @@ def test_recover_streams_reverts_uploading_to_thumbs_done() -> None:
         ステータスがthumbs_doneに戻っていること。
     """
     # Arrange
-    db.insert_stream(
-        db.Stream(video_id="video1", status="uploading", title="Test Video")
-    )
+    db.insert_stream(Stream(video_id="video1", status="uploading", title="Test Video"))
 
     # Act
     count = recover.recover_streams()
@@ -87,7 +86,7 @@ def test_recover_streams_respects_max_retries(
     """
     # Arrange
     db.insert_stream(
-        db.Stream(video_id="video1", status="downloading", title="Test Video")
+        Stream(video_id="video1", status="downloading", title="Test Video")
     )
     # リトライ回数を上限まで増やす
     for _ in range(3):

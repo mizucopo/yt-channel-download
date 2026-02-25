@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from src import db
+from src.models.stream import Stream
 from src.pipeline import cleanup
 
 
@@ -44,7 +45,7 @@ def test_cleanup_video_deletes_files(tmp_path: Path) -> None:
     (thumb_dir / "thumb_0001.jpg").touch()
 
     db.insert_stream(
-        db.Stream(
+        Stream(
             video_id="video1",
             status="uploaded",
             title="Test Video",
@@ -79,7 +80,7 @@ def test_cleanup_video_handles_missing_files() -> None:
     """
     # Arrange
     db.insert_stream(
-        db.Stream(
+        Stream(
             video_id="video1",
             status="uploaded",
             title="Test Video",

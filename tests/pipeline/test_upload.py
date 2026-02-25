@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src import db
+from src.models.stream import Stream
 from src.pipeline import upload
 
 
@@ -44,7 +45,7 @@ def test_upload_video_updates_status_on_success(tmp_path: Path) -> None:
     video_path.touch()
 
     db.insert_stream(
-        db.Stream(
+        Stream(
             video_id="video1",
             status="thumbs_done",
             title="Test Video",
@@ -86,7 +87,7 @@ def test_upload_video_reverts_status_on_failure(tmp_path: Path) -> None:
     video_path.touch()
 
     db.insert_stream(
-        db.Stream(
+        Stream(
             video_id="video1",
             status="thumbs_done",
             title="Test Video",
