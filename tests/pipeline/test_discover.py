@@ -8,8 +8,8 @@ import pytest
 
 from src import db
 from src.models.stream import Stream
+from src.models.video_info import VideoInfo
 from src.pipeline import discover
-from src.yt_api import VideoInfo
 
 
 @pytest.fixture(autouse=True)

@@ -3,21 +3,12 @@
 YouTubeライブアーカイブの検出と詳細取得を提供する。
 """
 
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, cast
 
 import requests
 
-
-@dataclass(frozen=True)
-class VideoInfo:
-    """動画情報を表すデータクラス."""
-
-    video_id: str
-    title: str
-    published_at: datetime
-    duration: str
+from src.models.video_info import VideoInfo
 
 
 class YouTubeClient:

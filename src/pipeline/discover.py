@@ -8,7 +8,7 @@ import logging
 from src import db
 from src.config import settings
 from src.models.stream import Stream
-from src.yt_api import YouTubeClient
+from src.youtube_client import YouTubeClient
 
 logger = logging.getLogger(__name__)
 

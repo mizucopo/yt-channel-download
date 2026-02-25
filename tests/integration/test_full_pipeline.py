@@ -42,8 +42,8 @@ def test_full_pipeline_flow(tmp_path: Path) -> None:
     # Arrange
     from datetime import datetime, timezone
 
+    from src.models.video_info import VideoInfo
     from src.pipeline import cleanup, discover, download, thumbs, upload
-    from src.yt_api import VideoInfo
 
     # Mock YouTube client
     mock_yt_client = Mock()

@@ -6,7 +6,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.yt_api import VideoInfo, YouTubeClient
+from src.models.video_info import VideoInfo
+from src.youtube_client import YouTubeClient
 
 
 @pytest.fixture
