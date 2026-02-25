@@ -22,7 +22,7 @@ def test_acquire_lock_prevents_concurrent_access(
         RuntimeErrorが発生すること。
     """
     # Arrange
-    monkeypatch.setattr("src.config.settings.download_dir", str(tmp_path))
+    monkeypatch.setattr("src.settings.settings.download_dir", str(tmp_path))
 
     # Act & Assert
     with acquire_lock(), pytest.raises(RuntimeError, match="Another instance"):  # noqa: SIM117
@@ -45,7 +45,7 @@ def test_acquire_lock_releases_on_exit(
         ロックが正常に取得できること。
     """
     # Arrange
-    monkeypatch.setattr("src.config.settings.download_dir", str(tmp_path))
+    monkeypatch.setattr("src.settings.settings.download_dir", str(tmp_path))
 
     # Act
     with acquire_lock():

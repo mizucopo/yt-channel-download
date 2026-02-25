@@ -9,7 +9,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from pathlib import Path
 
-from src.config import settings
+from src.settings import settings
 
 
 @contextmanager

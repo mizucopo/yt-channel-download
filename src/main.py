@@ -9,7 +9,6 @@ from pathlib import Path
 import click
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
-from src.config import settings
 from src.models.stream_status import StreamStatus
 from src.pipeline.cleanup import CleanupPipeline
 from src.pipeline.discover import DiscoverPipeline
@@ -17,6 +16,7 @@ from src.pipeline.download import DownloadPipeline
 from src.pipeline.recover import RecoverPipeline
 from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
+from src.settings import settings
 from src.stream_repository import StreamRepository
 from src.utils.locking import acquire_lock
 from src.utils.logging import setup_logging
