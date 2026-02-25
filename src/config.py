@@ -4,19 +4,7 @@
 """
 
 from decouple import config
-from pydantic import BaseModel, ConfigDict
-
-
-def _parse_channel_ids(value: str) -> list[str]:
-    """チャンネルID文字列をパースする.
-
-    Args:
-        value: カンマ区切りのチャンネルID文字列
-
-    Returns:
-        チャンネルIDのリスト
-    """
-    return value.split(",") if value else []
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class Settings(BaseModel):
@@ -29,9 +17,7 @@ class Settings(BaseModel):
 
     # YouTube API設定
     youtube_api_key: str = config("YOUTUBE_API_KEY", default="")
-    youtube_channel_ids: list[str] = config(
-        "YOUTUBE_CHANNEL_IDS", default=[], cast=_parse_channel_ids
-    )
+    youtube_channel_ids: str = config("YOUTUBE_CHANNEL_IDS", default="")
 
     # パス設定
     database_path: str = config("DATABASE_PATH", default="data/streams.db")
@@ -47,6 +33,21 @@ class Settings(BaseModel):
     # ダウンロード設定
     thumbnail_interval: int = config("THUMBNAIL_INTERVAL", default=60, cast=int)
     max_retries: int = config("MAX_RETRIES", default=3, cast=int)
+
+    @field_validator("youtube_channel_ids", mode="before")
+    @classmethod
+    def _parse_channel_ids(cls, value: str) -> list[str]:
+        """チャンネルID文字列をパースする.
+
+        Args:
+            value: カンマ区切りのチャンネルID文字列
+
+        Returns:
+            チャンネルIDのリスト
+        """
+        if not value:
+            return []
+        return [v.strip() for v in value.split(",") if v.strip()]
 
 
 settings = Settings()
