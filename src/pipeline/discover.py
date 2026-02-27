@@ -6,10 +6,11 @@ YouTube APIを使用して新しいライブアーカイブを検出し、デー
 import logging
 from collections.abc import Sequence
 
+from mizu_common import YouTubeClient
+
 from src.models.stream import Stream
 from src.models.stream_status import StreamStatus
 from src.stream_repository import StreamRepository
-from src.youtube_client import YouTubeClient
 
 logger = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@
 """
 
 from decouple import config
+from mizu_common import GoogleScope
 from pydantic import BaseModel, ConfigDict
 
 
@@ -26,6 +27,7 @@ class Settings(BaseModel):
     # Google OAuth設定（YouTube API, Google Drive API共通）
     google_oauth_client_id: str
     google_refresh_token: str
+    google_scopes: list[str]
     gdrive_root_folder_id: str
 
     # ダウンロード設定
@@ -68,6 +70,10 @@ class Settings(BaseModel):
             thumbnail_dir=config("THUMBNAIL_DIR", default="data/thumbnails"),
             google_oauth_client_id=config("GOOGLE_OAUTH_CLIENT_ID", default=""),
             google_refresh_token=config("GOOGLE_REFRESH_TOKEN", default=""),
+            google_scopes=[
+                GoogleScope.YOUTUBE_READONLY,
+                GoogleScope.DRIVE_FILE,
+            ],
             gdrive_root_folder_id=config("GDRIVE_ROOT_FOLDER_ID", default=""),
             thumbnail_interval=config("THUMBNAIL_INTERVAL", default=60, cast=int),
             max_retries=config("MAX_RETRIES", default=3, cast=int),

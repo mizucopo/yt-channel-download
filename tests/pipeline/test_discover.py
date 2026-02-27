@@ -5,10 +5,10 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from mizu_common import YouTubeVideoInfo as VideoInfo
 
 from src.models.stream import Stream
 from src.models.stream_status import StreamStatus
-from src.models.video_info import VideoInfo
 from src.pipeline.discover import DiscoverPipeline
 from src.stream_repository import StreamRepository
 

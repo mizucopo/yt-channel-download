@@ -9,9 +9,15 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import click
+from mizu_common import (
+    AlreadyRunningError,
+    GoogleOAuthClient,
+    LockManager,
+    LoggingConfigurator,
+    YouTubeClient,
+)
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
-from src.google_oauth_client import GoogleOAuthClient
 from src.models.stream_status import StreamStatus
 from src.pipeline.cleanup import CleanupPipeline
 from src.pipeline.discover import DiscoverPipeline
@@ -21,11 +27,7 @@ from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
 from src.settings import Settings
 from src.stream_repository import StreamRepository
-from src.utils.already_running_error import AlreadyRunningError
-from src.utils.lock_manager import LockManager
-from src.utils.logging_config import LoggingConfig
 from src.utils.path_manager import PathManager
-from src.youtube_client import YouTubeClient
 
 
 class Main:
@@ -77,6 +79,7 @@ class Main:
         return GoogleOAuthClient(
             oauth_client_id=self._settings.google_oauth_client_id,
             refresh_token=self._settings.google_refresh_token,
+            scopes=self._settings.google_scopes,
         )
 
     def get_youtube_client(self) -> YouTubeClient:
@@ -95,7 +98,7 @@ class Main:
             verbose: 詳細ログを有効にするかどうか
         """
         level = logging.DEBUG if verbose else logging.INFO
-        LoggingConfig(level=level)
+        LoggingConfigurator(level=level)
 
         self._path_manager.ensure_directories()
 

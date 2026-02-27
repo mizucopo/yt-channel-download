@@ -5,16 +5,16 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from mizu_common import YouTubeClient
+from mizu_common import YouTubeVideoInfo as VideoInfo
 
 from src.models.stream_status import StreamStatus
-from src.models.video_info import VideoInfo
 from src.pipeline.cleanup import CleanupPipeline
 from src.pipeline.discover import DiscoverPipeline
 from src.pipeline.download import DownloadPipeline
 from src.pipeline.thumbs import ThumbsPipeline
 from src.pipeline.upload import UploadPipeline
 from src.stream_repository import StreamRepository
-from src.youtube_client import YouTubeClient
 
 
 @pytest.fixture
