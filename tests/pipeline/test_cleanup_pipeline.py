@@ -6,7 +6,7 @@ import pytest
 
 from src.models.stream import Stream
 from src.models.stream_status import StreamStatus
-from src.pipeline.cleanup import CleanupPipeline
+from src.pipeline.cleanup_pipeline import CleanupPipeline
 from src.stream_repository import StreamRepository
 
 
