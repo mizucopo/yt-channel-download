@@ -25,8 +25,8 @@ from src.pipeline.download_pipeline import DownloadPipeline
 from src.pipeline.recover_pipeline import RecoverPipeline
 from src.pipeline.thumbs_pipeline import ThumbsPipeline
 from src.pipeline.upload_pipeline import UploadPipeline
+from src.repository.stream_repository import StreamRepository
 from src.settings import Settings
-from src.stream_repository import StreamRepository
 from src.utils.path_manager import PathManager
 
 

@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 
 from src.models.stream_status import StreamStatus
-from src.stream_repository import StreamRepository
+from src.repository.stream_repository import StreamRepository
 
 logger = logging.getLogger(__name__)
 

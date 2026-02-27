@@ -8,7 +8,7 @@ import pytest
 from src.models.stream import Stream
 from src.models.stream_status import StreamStatus
 from src.pipeline.thumbs_pipeline import ThumbsPipeline
-from src.stream_repository import StreamRepository
+from src.repository.stream_repository import StreamRepository
 
 
 @pytest.fixture

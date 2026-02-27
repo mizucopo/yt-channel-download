@@ -9,7 +9,7 @@ from pathlib import Path
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
 from src.models.stream_status import StreamStatus
-from src.stream_repository import StreamRepository
+from src.repository.stream_repository import StreamRepository
 
 logger = logging.getLogger(__name__)
 

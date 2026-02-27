@@ -14,7 +14,7 @@ from src.pipeline.discover_pipeline import DiscoverPipeline
 from src.pipeline.download_pipeline import DownloadPipeline
 from src.pipeline.thumbs_pipeline import ThumbsPipeline
 from src.pipeline.upload_pipeline import UploadPipeline
-from src.stream_repository import StreamRepository
+from src.repository.stream_repository import StreamRepository
 
 
 @pytest.fixture

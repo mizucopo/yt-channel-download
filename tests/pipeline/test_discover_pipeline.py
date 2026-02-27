@@ -10,7 +10,7 @@ from mizu_common import YouTubeVideoInfo as VideoInfo
 from src.models.stream import Stream
 from src.models.stream_status import StreamStatus
 from src.pipeline.discover_pipeline import DiscoverPipeline
-from src.stream_repository import StreamRepository
+from src.repository.stream_repository import StreamRepository
 
 
 @pytest.fixture
