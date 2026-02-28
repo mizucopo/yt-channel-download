@@ -1,115 +1,91 @@
 """設定モジュールのテスト."""
 
-import os
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 
 from src.settings import Settings
 
 
-def test_from_env_raises_error_when_channel_ids_missing() -> None:
-    """YOUTUBE_CHANNEL_IDSが未設定の場合、ValueErrorが発生すること.
+@pytest.mark.parametrize(
+    "env_values,expected_error",
+    [
+        pytest.param(
+            {
+                "YOUTUBE_CHANNEL_IDS": "",
+                "GOOGLE_OAUTH_CLIENT_ID": "",
+                "GOOGLE_REFRESH_TOKEN": "",
+                "GDRIVE_ROOT_FOLDER_ID": "",
+            },
+            "YOUTUBE_CHANNEL_IDS",
+            id="channel_ids_missing",
+        ),
+        pytest.param(
+            {
+                "YOUTUBE_CHANNEL_IDS": "channel1",
+                "GOOGLE_OAUTH_CLIENT_ID": "",
+                "GOOGLE_REFRESH_TOKEN": "",
+                "GDRIVE_ROOT_FOLDER_ID": "",
+            },
+            "GOOGLE_OAUTH_CLIENT_ID",
+            id="oauth_client_id_missing",
+        ),
+        pytest.param(
+            {
+                "YOUTUBE_CHANNEL_IDS": "channel1",
+                "GOOGLE_OAUTH_CLIENT_ID": "client_id_123",
+                "GOOGLE_REFRESH_TOKEN": "",
+                "GDRIVE_ROOT_FOLDER_ID": "",
+            },
+            "GOOGLE_REFRESH_TOKEN",
+            id="refresh_token_missing",
+        ),
+        pytest.param(
+            {
+                "YOUTUBE_CHANNEL_IDS": "channel1",
+                "GOOGLE_OAUTH_CLIENT_ID": "client_id_123",
+                "GOOGLE_REFRESH_TOKEN": "refresh_token_123",
+                "GDRIVE_ROOT_FOLDER_ID": "",
+            },
+            "GDRIVE_ROOT_FOLDER_ID",
+            id="gdrive_root_folder_id_missing",
+        ),
+    ],
+)
+def test_from_env_raises_error_when_required_field_missing(
+    env_values: dict[str, str],
+    expected_error: str,
+) -> None:
+    """必須フィールドが未設定の場合、ValueErrorが発生すること.
 
     Arrange:
-        YOUTUBE_CHANNEL_IDSを未設定にする。
+        config関数をモックして指定された値を返すようにする。
 
     Act:
         from_env()を呼び出す。
 
     Assert:
-        ValueErrorが発生すること。
+        期待されるエラーメッセージを含むValueErrorが発生すること。
     """
-    # Arrange
-    os.environ.pop("YOUTUBE_CHANNEL_IDS", None)
 
-    # Act & Assert
-    with pytest.raises(ValueError, match="YOUTUBE_CHANNEL_IDS"):
+    # Arrange
+    def mock_config(key: str, default: str = "", **kwargs: Any) -> str:  # noqa: ARG001
+        return env_values.get(key, default)
+
+    with (
+        patch("src.settings.config", side_effect=mock_config),
+        pytest.raises(ValueError, match=expected_error),
+    ):
+        # Act
         Settings.from_env()
-
-
-def test_from_env_raises_error_when_google_oauth_client_id_missing() -> None:
-    """GOOGLE_OAUTH_CLIENT_IDが未設定の場合、ValueErrorが発生すること.
-
-    Arrange:
-        GOOGLE_OAUTH_CLIENT_IDを未設定にする。
-
-    Act:
-        from_env()を呼び出す。
-
-    Assert:
-        ValueErrorが発生すること。
-    """
-    # Arrange
-    os.environ["YOUTUBE_CHANNEL_IDS"] = "channel1"
-    os.environ.pop("GOOGLE_OAUTH_CLIENT_ID", None)
-
-    try:
-        # Act & Assert
-        with pytest.raises(ValueError, match="GOOGLE_OAUTH_CLIENT_ID"):
-            Settings.from_env()
-    finally:
-        os.environ.pop("YOUTUBE_CHANNEL_IDS", None)
-
-
-def test_from_env_raises_error_when_google_refresh_token_missing() -> None:
-    """GOOGLE_REFRESH_TOKENが未設定の場合、ValueErrorが発生すること.
-
-    Arrange:
-        GOOGLE_REFRESH_TOKENを未設定にする。
-
-    Act:
-        from_env()を呼び出す。
-
-    Assert:
-        ValueErrorが発生すること。
-    """
-    # Arrange
-    os.environ["YOUTUBE_CHANNEL_IDS"] = "channel1"
-    os.environ["GOOGLE_OAUTH_CLIENT_ID"] = "client_id_123"
-    os.environ.pop("GOOGLE_REFRESH_TOKEN", None)
-
-    try:
-        # Act & Assert
-        with pytest.raises(ValueError, match="GOOGLE_REFRESH_TOKEN"):
-            Settings.from_env()
-    finally:
-        os.environ.pop("YOUTUBE_CHANNEL_IDS", None)
-        os.environ.pop("GOOGLE_OAUTH_CLIENT_ID", None)
-
-
-def test_from_env_raises_error_when_gdrive_root_folder_id_missing() -> None:
-    """GDRIVE_ROOT_FOLDER_IDが未設定の場合、ValueErrorが発生すること.
-
-    Arrange:
-        GDRIVE_ROOT_FOLDER_IDを未設定にする。
-
-    Act:
-        from_env()を呼び出す。
-
-    Assert:
-        ValueErrorが発生すること。
-    """
-    # Arrange
-    os.environ["YOUTUBE_CHANNEL_IDS"] = "channel1"
-    os.environ["GOOGLE_OAUTH_CLIENT_ID"] = "client_id_123"
-    os.environ["GOOGLE_REFRESH_TOKEN"] = "refresh_token_123"
-    os.environ.pop("GDRIVE_ROOT_FOLDER_ID", None)
-
-    try:
-        # Act & Assert
-        with pytest.raises(ValueError, match="GDRIVE_ROOT_FOLDER_ID"):
-            Settings.from_env()
-    finally:
-        os.environ.pop("YOUTUBE_CHANNEL_IDS", None)
-        os.environ.pop("GOOGLE_OAUTH_CLIENT_ID", None)
-        os.environ.pop("GOOGLE_REFRESH_TOKEN", None)
 
 
 def test_from_env_succeeds_when_required_fields_set() -> None:
     """必須フィールドが設定されている場合、正常に作成されること.
 
     Arrange:
-        必須フィールドを設定する。
+        config関数をモックして必要な値を返すようにする。
 
     Act:
         from_env()を呼び出す。
@@ -118,22 +94,22 @@ def test_from_env_succeeds_when_required_fields_set() -> None:
         設定オブジェクトが正常に作成されること。
     """
     # Arrange
-    os.environ["YOUTUBE_CHANNEL_IDS"] = "channel1,channel2"
-    os.environ["GOOGLE_OAUTH_CLIENT_ID"] = "client_id_123"
-    os.environ["GOOGLE_REFRESH_TOKEN"] = "refresh_token_123"
-    os.environ["GDRIVE_ROOT_FOLDER_ID"] = "folder123"
+    env_values = {
+        "YOUTUBE_CHANNEL_IDS": "channel1,channel2",
+        "GOOGLE_OAUTH_CLIENT_ID": "client_id_123",
+        "GOOGLE_REFRESH_TOKEN": "refresh_token_123",
+        "GDRIVE_ROOT_FOLDER_ID": "folder123",
+    }
 
-    try:
+    def mock_config(key: str, default: str = "", **kwargs: Any) -> str:  # noqa: ARG001
+        return env_values.get(key, default)
+
+    with patch("src.settings.config", side_effect=mock_config):
         # Act
         settings = Settings.from_env()
 
-        # Assert
-        assert settings.youtube_channel_ids == ["channel1", "channel2"]
-        assert settings.google_oauth_client_id == "client_id_123"
-        assert settings.google_refresh_token == "refresh_token_123"
-        assert settings.gdrive_root_folder_id == "folder123"
-    finally:
-        os.environ.pop("YOUTUBE_CHANNEL_IDS", None)
-        os.environ.pop("GOOGLE_OAUTH_CLIENT_ID", None)
-        os.environ.pop("GOOGLE_REFRESH_TOKEN", None)
-        os.environ.pop("GDRIVE_ROOT_FOLDER_ID", None)
+    # Assert
+    assert settings.youtube_channel_ids == ["channel1", "channel2"]
+    assert settings.google_oauth_client_id == "client_id_123"
+    assert settings.google_refresh_token == "refresh_token_123"
+    assert settings.gdrive_root_folder_id == "folder123"
