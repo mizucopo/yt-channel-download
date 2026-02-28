@@ -7,6 +7,7 @@
 import logging
 
 from src.constants.stream_status import StreamStatus
+from src.notifications.discord_notifier import DiscordNotifier
 from src.pipeline.cleanup_pipeline import CleanupPipeline
 from src.pipeline.download_pipeline import DownloadPipeline
 from src.pipeline.thumbs_pipeline import ThumbsPipeline
@@ -27,6 +28,7 @@ class SingleVideoOrchestrator:
         upload_pipeline: UploadPipeline,
         cleanup_pipeline: CleanupPipeline,
         max_retries: int,
+        discord_notifier: DiscordNotifier | None = None,
     ) -> None:
         """オーケストレーターを初期化する.
 
@@ -37,6 +39,7 @@ class SingleVideoOrchestrator:
             upload_pipeline: アップロードパイプライン
             cleanup_pipeline: クリーンアップパイプライン
             max_retries: 最大リトライ回数
+            discord_notifier: Discord通知クライアント（オプション）
         """
         self._repository = repository
         self._download_pipeline = download_pipeline
@@ -44,6 +47,7 @@ class SingleVideoOrchestrator:
         self._upload_pipeline = upload_pipeline
         self._cleanup_pipeline = cleanup_pipeline
         self._max_retries = max_retries
+        self._discord_notifier = discord_notifier
 
     def process_single_video(self) -> bool:
         """1動画を全ステージで処理する.
@@ -86,6 +90,14 @@ class SingleVideoOrchestrator:
         if not self._cleanup_pipeline.cleanup_next():
             logger.warning("Cleanup failed for %s", video_id)
             # クリーンアップ失敗でも処理完了とみなす（次回再試行可能）
+
+        # 全パイプライン完了後にDiscord通知を送信
+        if self._discord_notifier:
+            updated_stream = self._repository.get(video_id)
+            if updated_stream:
+                self._discord_notifier.notify_upload_complete(
+                    title=updated_stream.title, video_id=video_id
+                )
 
         logger.info("Completed processing video: %s", video_id)
         return True

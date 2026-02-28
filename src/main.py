@@ -20,6 +20,7 @@ from mizu_common import (
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
 from src.constants.stream_status import StreamStatus
+from src.notifications.discord_notifier import DiscordNotifier
 from src.pipeline.cleanup_pipeline import CleanupPipeline
 from src.pipeline.discover_pipeline import DiscoverPipeline
 from src.pipeline.download_pipeline import DownloadPipeline
@@ -107,6 +108,24 @@ class Main:
             refresh_token=self._settings.google_refresh_token,
         )
 
+    def get_discord_notifier(self) -> DiscordNotifier | None:
+        """Discord通知クライアントを取得する.
+
+        Webhook URLが設定されていない場合はNoneを返す。
+
+        Returns:
+            DiscordNotifierまたはNone
+        """
+        webhook_url = self._settings.discord_webhook_url
+        if not webhook_url:
+            return None
+
+        gdrive_folder_url = f"https://drive.google.com/drive/folders/{self._settings.gdrive_root_folder_id}"
+        return DiscordNotifier(
+            webhook_url=webhook_url,
+            gdrive_folder_url=gdrive_folder_url,
+        )
+
     def initialize(self) -> None:
         """アプリケーションを初期化する."""
         level = logging.DEBUG if self._verbose else logging.INFO
@@ -191,6 +210,7 @@ class Main:
                 upload_pipeline=upload_pipeline,
                 cleanup_pipeline=cleanup_pipeline,
                 max_retries=self._settings.max_retries,
+                discord_notifier=self.get_discord_notifier(),
             )
             processed = orchestrator.process_all_videos()
             click.echo(f"  Processed: {processed} videos")

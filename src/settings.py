@@ -39,6 +39,9 @@ class Settings(BaseModel):
     # ロック設定
     lock_stale_hours: int
 
+    # Discord通知設定
+    discord_webhook_url: str | None
+
     @staticmethod
     def _parse_channel_ids(value: str) -> list[str]:
         """チャンネルID文字列をパースする.
@@ -82,6 +85,7 @@ class Settings(BaseModel):
             thumbnail_quality=config("THUMBNAIL_QUALITY", default=2, cast=int),
             max_retries=config("MAX_RETRIES", default=3, cast=int),
             lock_stale_hours=config("LOCK_STALE_HOURS", default=3, cast=int),
+            discord_webhook_url=config("DISCORD_WEBHOOK_URL", default=None),
         )
 
         # 必須設定の検証

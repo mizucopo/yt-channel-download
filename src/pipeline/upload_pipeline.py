@@ -103,6 +103,7 @@ class UploadPipeline:
                 gdrive_file_name=video_file.name,
             )
             logger.info("Upload completed: %s", video_id)
+
             return True
 
         except Exception as e:
@@ -128,7 +129,10 @@ class UploadPipeline:
         if stream is None or stream.local_path is None:
             return False
 
-        return self.upload_video(stream.video_id, stream.local_path)
+        return self.upload_video(
+            video_id=stream.video_id,
+            local_path=stream.local_path,
+        )
 
     def upload_all(self) -> int:
         """すべての待機中の動画をアップロードする.
