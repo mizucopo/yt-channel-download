@@ -84,6 +84,7 @@ class Main:
         """Google OAuth認証クライアントを取得する."""
         return GoogleOAuthClient(
             oauth_client_id=self._settings.google_oauth_client_id,
+            oauth_client_secret=self._settings.google_oauth_client_secret,
             refresh_token=self._settings.google_refresh_token,
             scopes=self._settings.google_scopes,
         )

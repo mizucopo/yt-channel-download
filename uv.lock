@@ -303,8 +303,8 @@ wheels = [
 
 [[package]]
 name = "mizu-common-py"
-version = "2.1.0"
-source = { git = "https://github.com/mizucopo/mizu-common-py.git?tag=2.1.0#6acc4488e5f9f230a26f397ab23168611f3259f5" }
+version = "2.1.1"
+source = { git = "https://github.com/mizucopo/mizu-common-py.git?tag=2.1.1#3f8f040976a64d15fd3224536766773614120d6e" }
 dependencies = [
     { name = "google-api-python-client" },
     { name = "google-api-python-client-stubs" },
@@ -796,7 +796,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.0.0" },
-    { name = "mizu-common-py", git = "https://github.com/mizucopo/mizu-common-py.git?tag=2.1.0" },
+    { name = "mizu-common-py", git = "https://github.com/mizucopo/mizu-common-py.git?tag=2.1.1" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "python-decouple", specifier = ">=3.8" },
     { name = "yt-dlp", specifier = ">=2024.0.0" },
