@@ -12,6 +12,7 @@ import click
 from mizu_common import (
     AlreadyRunningError,
     GoogleOAuthClient,
+    GoogleScope,
     LockManager,
     LoggingConfigurator,
     YouTubeClient,
@@ -302,6 +303,30 @@ class Main:
         lock_manager.release()
         click.echo(f"Removed lock file: {lock_manager.lock_path}")
 
+    def auth_cmd(self) -> None:
+        """Google OAuth認証を実行し、リフレッシュトークンを取得する."""
+        if not self._settings.google_oauth_client_secret:
+            click.echo("Error: GOOGLE_OAUTH_CLIENT_SECRET is not set.", err=True)
+            raise SystemExit(1)
+
+        if not self._settings.google_oauth_client_id:
+            click.echo("Error: GOOGLE_OAUTH_CLIENT_ID is not set.", err=True)
+            raise SystemExit(1)
+
+        refresh_token = GoogleOAuthClient.authenticate(
+            self._settings.google_oauth_client_id,
+            self._settings.google_oauth_client_secret,
+            [GoogleScope.YOUTUBE_READONLY, GoogleScope.DRIVE_FILE],
+        )
+
+        if refresh_token:
+            click.echo("\nAuthentication successful!")
+            click.echo("Please add the following to your .env file:")
+            click.echo(f"GOOGLE_REFRESH_TOKEN={refresh_token}")
+        else:
+            click.echo("\nAuthentication failed.", err=True)
+            raise SystemExit(1)
+
 
 @click.group()
 @click.option("-v", "--verbose", is_flag=True, help="詳細ログを有効にする")
@@ -394,6 +419,13 @@ def status(app: Main) -> None:
 def unlock(app: Main) -> None:
     """ロックファイルを削除する."""
     app.unlock()
+
+
+@cli.command()
+@click.pass_obj
+def auth(app: Main) -> None:
+    """Google OAuth認証を実行する."""
+    app.auth_cmd()
 
 
 if __name__ == "__main__":

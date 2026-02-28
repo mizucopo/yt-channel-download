@@ -26,6 +26,7 @@ class Settings(BaseModel):
 
     # Google OAuth設定（YouTube API, Google Drive API共通）
     google_oauth_client_id: str
+    google_oauth_client_secret: str
     google_refresh_token: str
     google_scopes: list[str]
     gdrive_root_folder_id: str
@@ -69,6 +70,7 @@ class Settings(BaseModel):
             download_dir=config("DOWNLOAD_DIR", default="data/downloads"),
             thumbnail_dir=config("THUMBNAIL_DIR", default="data/thumbnails"),
             google_oauth_client_id=config("GOOGLE_OAUTH_CLIENT_ID", default=""),
+            google_oauth_client_secret=config("GOOGLE_OAUTH_CLIENT_SECRET", default=""),
             google_refresh_token=config("GOOGLE_REFRESH_TOKEN", default=""),
             google_scopes=[
                 GoogleScope.YOUTUBE_READONLY,

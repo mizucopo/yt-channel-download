@@ -49,6 +49,12 @@ class GoogleOAuthClient:
         scopes: list[str],
     ) -> None: ...
     def get_access_token(self) -> str: ...
+    @staticmethod
+    def authenticate(
+        client_id: str,
+        client_secret: str,
+        scopes: list[str],
+    ) -> str | None: ...
 
 # YouTube
 class YouTubeVideoInfo:

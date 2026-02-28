@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from mizu_common import GoogleScope
 
 from src.main import Main
 
@@ -229,3 +230,110 @@ def test_recover_cmd_executes_recover_pipeline(app: Main) -> None:
 
         # Assert
         mock_recover.return_value.recover_all.assert_called_once()
+
+
+def test_auth_cmd_succeeds_with_valid_credentials(app: Main) -> None:
+    """auth_cmd()が有効な認証情報で成功すること.
+
+    Arrange:
+        設定にCLIENT_IDとCLIENT_SECRETを設定する。
+        GoogleOAuthClient.authenticateをモックする。
+
+    Act:
+        auth_cmd()を呼び出す。
+
+    Assert:
+        authenticateが正しい引数で呼ばれること。
+        リフレッシュトークンが出力されること。
+    """
+    # Arrange
+    app.settings.google_oauth_client_id = "test_client_id"
+    app.settings.google_oauth_client_secret = "test_client_secret"
+
+    with (
+        patch(
+            "src.main.GoogleOAuthClient.authenticate",
+            return_value="test_refresh_token",
+        ) as mock_auth,
+        patch("src.main.click.echo") as mock_echo,
+    ):
+        # Act
+        app.auth_cmd()
+
+        # Assert
+        mock_auth.assert_called_once_with(
+            "test_client_id",
+            "test_client_secret",
+            [GoogleScope.YOUTUBE_READONLY, GoogleScope.DRIVE_FILE],
+        )
+        # リフレッシュトークンを含むメッセージが出力されること
+        calls = mock_echo.call_args_list
+        assert any("test_refresh_token" in str(call) for call in calls)
+
+
+def test_auth_cmd_fails_without_client_secret(app: Main) -> None:
+    """auth_cmd()がCLIENT_SECRET未設定時に失敗すること.
+
+    Arrange:
+        設定のCLIENT_SECRETを空にする。
+
+    Act:
+        auth_cmd()を呼び出す。
+
+    Assert:
+        SystemExit(1)が発生すること。
+    """
+    # Arrange
+    app.settings.google_oauth_client_id = "test_client_id"
+    app.settings.google_oauth_client_secret = ""
+
+    # Act & Assert
+    with pytest.raises(SystemExit) as exc_info:
+        app.auth_cmd()
+    assert exc_info.value.code == 1
+
+
+def test_auth_cmd_fails_without_client_id(app: Main) -> None:
+    """auth_cmd()がCLIENT_ID未設定時に失敗すること.
+
+    Arrange:
+        設定のCLIENT_IDを空にする。
+
+    Act:
+        auth_cmd()を呼び出す。
+
+    Assert:
+        SystemExit(1)が発生すること。
+    """
+    # Arrange
+    app.settings.google_oauth_client_id = ""
+    app.settings.google_oauth_client_secret = "test_client_secret"
+
+    # Act & Assert
+    with pytest.raises(SystemExit) as exc_info:
+        app.auth_cmd()
+    assert exc_info.value.code == 1
+
+
+def test_auth_cmd_fails_when_authentication_fails(app: Main) -> None:
+    """auth_cmd()が認証失敗時に失敗すること.
+
+    Arrange:
+        設定にCLIENT_IDとCLIENT_SECRETを設定する。
+        GoogleOAuthClient.authenticateがNoneを返すようにモックする。
+
+    Act:
+        auth_cmd()を呼び出す。
+
+    Assert:
+        SystemExit(1)が発生すること。
+    """
+    # Arrange
+    app.settings.google_oauth_client_id = "test_client_id"
+    app.settings.google_oauth_client_secret = "test_client_secret"
+
+    with patch("src.main.GoogleOAuthClient.authenticate", return_value=None):
+        # Act & Assert
+        with pytest.raises(SystemExit) as exc_info:
+            app.auth_cmd()
+        assert exc_info.value.code == 1
