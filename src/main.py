@@ -24,6 +24,7 @@ from src.pipeline.cleanup_pipeline import CleanupPipeline
 from src.pipeline.discover_pipeline import DiscoverPipeline
 from src.pipeline.download_pipeline import DownloadPipeline
 from src.pipeline.recover_pipeline import RecoverPipeline
+from src.pipeline.single_video_orchestrator import SingleVideoOrchestrator
 from src.pipeline.thumbs_pipeline import ThumbsPipeline
 from src.pipeline.upload_pipeline import UploadPipeline
 from src.repository.stream_repository import StreamRepository
@@ -154,42 +155,45 @@ class Main:
             else:
                 click.echo(f"  Discovered: {discovered} new videos")
 
-            click.echo("Downloading videos...")
-            downloaded = DownloadPipeline(
+            # パイプラインを初期化
+            download_pipeline = DownloadPipeline(
                 max_retries=self._settings.max_retries,
                 download_dir=self._path_manager.download_dir,
                 repository=repository,
-            ).download_all()
-            click.echo(f"  Downloaded: {downloaded} videos")
-
-            click.echo("Extracting thumbnails...")
-            thumbnailed = ThumbsPipeline(
+            )
+            thumbs_pipeline = ThumbsPipeline(
                 max_retries=self._settings.max_retries,
                 thumbnail_interval=self._settings.thumbnail_interval,
                 thumbnail_quality=self._settings.thumbnail_quality,
                 thumbnail_dir=self._path_manager.thumbnail_dir,
                 repository=repository,
-            ).extract_all()
-            click.echo(f"  Extracted: {thumbnailed} videos")
-
-            click.echo("Uploading to Google Drive...")
-            uploaded = UploadPipeline(
+            )
+            upload_pipeline = UploadPipeline(
                 max_retries=self._settings.max_retries,
                 gdrive_provider=gdrive_provider,
                 gdrive_root_folder_id=self._settings.gdrive_root_folder_id,
                 thumbnail_dir=self._path_manager.thumbnail_dir,
                 repository=repository,
-            ).upload_all()
-            click.echo(f"  Uploaded: {uploaded} videos")
-
-            click.echo("Cleaning up local files...")
-            cleaned = CleanupPipeline(
+            )
+            cleanup_pipeline = CleanupPipeline(
                 max_retries=self._settings.max_retries,
                 download_dir=self._path_manager.download_dir,
                 thumbnail_dir=self._path_manager.thumbnail_dir,
                 repository=repository,
-            ).cleanup_all()
-            click.echo(f"  Cleaned: {cleaned} videos")
+            )
+
+            # 1動画単位でパイプライン全体を実行
+            click.echo("Processing videos...")
+            orchestrator = SingleVideoOrchestrator(
+                repository=repository,
+                download_pipeline=download_pipeline,
+                thumbs_pipeline=thumbs_pipeline,
+                upload_pipeline=upload_pipeline,
+                cleanup_pipeline=cleanup_pipeline,
+                max_retries=self._settings.max_retries,
+            )
+            processed = orchestrator.process_all_videos()
+            click.echo(f"  Processed: {processed} videos")
 
             click.echo("Pipeline completed.")
 
