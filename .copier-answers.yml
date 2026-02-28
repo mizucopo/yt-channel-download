@@ -2,12 +2,10 @@ _commit: f5e8af0
 _src_path: git@github.com:mizucopo/repo-template.git
 author_email: mizu.copo@gmail.com
 author_name: みず
-aws_account_id: '199426002319'
-aws_region: us-east-1
 docker_image_name: yt-live-download
-docker_registry: 199426002319.dkr.ecr.us-east-1.amazonaws.com
+docker_registry: mizucopo
 python_version: '3.14'
-use_aws_ecr: true
+use_aws_ecr: false
 use_docker: true
 use_gh_actions_docker_release: true
 use_gh_actions_pr_tag_check: true
