@@ -67,12 +67,14 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
         patch.object(app, "get_repository", return_value=mock_repository),
         patch.object(app, "get_youtube_client", return_value=mock_youtube_client),
         patch.object(app, "get_gdrive_provider", return_value=mock_gdrive_provider),
+        patch("src.main.RecoverPipeline") as mock_recover,
         patch("src.main.DiscoverPipeline") as mock_discover,
         patch("src.main.DownloadPipeline") as mock_download,
         patch("src.main.ThumbsPipeline") as mock_thumbs,
         patch("src.main.UploadPipeline") as mock_upload,
         patch("src.main.CleanupPipeline") as mock_cleanup,
     ):
+        mock_recover.return_value.recover_all.return_value = 1
         mock_discover.return_value.discover_all.return_value = 1
         mock_download.return_value.download_all.return_value = 1
         mock_thumbs.return_value.extract_all.return_value = 1
@@ -83,6 +85,7 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
         app.run()
 
         # Assert
+        mock_recover.assert_called_once()
         mock_discover.assert_called_once_with(
             client=mock_youtube_client,
             channel_ids=app.settings.youtube_channel_ids,
@@ -92,25 +95,6 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
         mock_thumbs.assert_called_once()
         mock_upload.assert_called_once()
         mock_cleanup.assert_called_once()
-
-
-def test_recover_cmd_executes_recover_pipeline(app: Main) -> None:
-    """recover_cmd()がRecoverPipelineを実行すること."""
-    # Arrange
-    mock_repository = MagicMock()
-
-    with (
-        patch.object(app, "acquire_lock"),
-        patch.object(app, "get_repository", return_value=mock_repository),
-        patch("src.main.RecoverPipeline") as mock_recover,
-    ):
-        mock_recover.return_value.recover_all.return_value = 2
-
-        # Act
-        app.recover_cmd()
-
-        # Assert
-        mock_recover.return_value.recover_all.assert_called_once()
 
 
 def test_auth_cmd_succeeds_with_valid_credentials(app: Main) -> None:

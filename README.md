@@ -64,11 +64,8 @@ uv sync
 ### CLIコマンド
 
 ```bash
-# 全パイプラインを実行
+# 全パイプラインを実行（中断されたストリームの自動復旧を含む）
 python -m src.main run
-
-# 中断回復
-python -m src.main recover-cmd
 
 # ステータス確認
 python -m src.main status

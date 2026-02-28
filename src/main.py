@@ -119,6 +119,14 @@ class Main:
             youtube_client = self.get_youtube_client()
             gdrive_provider = self.get_gdrive_provider()
 
+            click.echo("Recovering streams...")
+            recovered = RecoverPipeline(
+                max_retries=self._settings.max_retries,
+                thumbnail_dir=self._path_manager.thumbnail_dir,
+                repository=repository,
+            ).recover_all()
+            click.echo(f"  Recovered: {recovered} streams")
+
             click.echo("Discovering videos...")
             discovered = DiscoverPipeline(
                 client=youtube_client,
@@ -164,17 +172,6 @@ class Main:
             click.echo(f"  Cleaned: {cleaned} videos")
 
             click.echo("Pipeline completed.")
-
-    def recover_cmd(self) -> None:
-        """中断されたストリームを回復する."""
-        with self.acquire_lock():
-            repository = self.get_repository()
-            count = RecoverPipeline(
-                max_retries=self._settings.max_retries,
-                thumbnail_dir=self._path_manager.thumbnail_dir,
-                repository=repository,
-            ).recover_all()
-            click.echo(f"Recovered {count} streams.")
 
     def status(self) -> None:
         """現在のステータスを表示する."""
@@ -240,13 +237,6 @@ def cli(ctx: click.Context, verbose: bool) -> None:
 def run(app: Main) -> None:
     """全パイプラインを実行する."""
     app.run()
-
-
-@cli.command("recover-cmd")
-@click.pass_obj
-def recover_cmd(app: Main) -> None:
-    """中断されたストリームを回復する."""
-    app.recover_cmd()
 
 
 @cli.command()
