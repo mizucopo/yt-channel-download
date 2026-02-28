@@ -68,6 +68,20 @@ class UploadPipeline:
         sanitized = sanitized.strip(". ")
         return sanitized if sanitized else "untitled"
 
+    def _generate_gdrive_folder_name(self, title: str | None, video_id: str) -> str:
+        """Google Drive用のフォルダ名を生成する.
+
+        Args:
+            title: YouTube動画タイトル
+            video_id: YouTube動画ID
+
+        Returns:
+            Google Drive用のフォルダ名
+        """
+        if title is None:
+            return video_id
+        return self._sanitize_filename(title)
+
     def _generate_gdrive_filename(self, title: str | None, original_path: Path) -> str:
         """Google Drive用のファイル名を生成する.
 
@@ -112,12 +126,13 @@ class UploadPipeline:
             if not video_file.exists():
                 raise FileNotFoundError(f"Video file not found: {local_path}")
 
+            folder_name = self._generate_gdrive_folder_name(title, video_id)
             gdrive_filename = self._generate_gdrive_filename(title, video_file)
 
             logger.info("Uploading video: %s", video_id)
             self._gdrive_provider.upload(
                 source_path=str(video_file),
-                destination_filename=gdrive_filename,
+                destination_filename=f"{folder_name}/{gdrive_filename}",
             )
 
             # サムネイルファイルを個別にアップロード
@@ -128,7 +143,7 @@ class UploadPipeline:
                     if thumb_file.is_file():
                         self._gdrive_provider.upload(
                             source_path=str(thumb_file),
-                            destination_filename=f"{video_id}_thumbnails/{thumb_file.name}",
+                            destination_filename=f"{folder_name}/thumbnails/{thumb_file.name}",
                         )
 
             # CAS更新: uploading -> uploaded

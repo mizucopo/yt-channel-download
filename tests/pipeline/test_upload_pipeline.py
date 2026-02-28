@@ -70,7 +70,7 @@ def test_upload_video_updates_status_on_success(
     assert result.gdrive_file_id == ""  # 新APIではファイルIDを返さない
     mock_provider.upload.assert_called_once_with(
         source_path=str(video_path),
-        destination_filename="video.mp4",
+        destination_filename="video1/video.mp4",
     )
 
 
@@ -169,7 +169,7 @@ def test_upload_video_uses_youtube_title_as_filename(
     assert success is True
     mock_provider.upload.assert_called_once_with(
         source_path=str(video_path),
-        destination_filename="Test Video Title.mp4",
+        destination_filename="Test Video Title/Test Video Title.mp4",
     )
 
 
@@ -218,7 +218,7 @@ def test_upload_video_fallback_to_original_filename_when_title_is_none(
     assert success is True
     mock_provider.upload.assert_called_once_with(
         source_path=str(video_path),
-        destination_filename="video_id.mp4",
+        destination_filename="video1/video_id.mp4",
     )
 
 
