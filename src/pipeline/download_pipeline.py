@@ -67,7 +67,7 @@ class DownloadPipeline:
                     "-o",
                     str(output_template),
                     "--print",
-                    "filepath",
+                    "after_move:filepath",
                     "--no-playlist",
                     "--no-warnings",
                     url,
