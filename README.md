@@ -135,59 +135,11 @@ docker run --rm \
   mizucopo/yt-live-download run
 ```
 
-## ロック機能
+## 詳細ドキュメント
 
-二重起動防止のためのファイルロック機能を備えています。
-
-- **ロックファイル**: `{DOWNLOAD_DIR}/.app.lock`
-- **動作**:
-  - ロックファイルが存在し、`LOCK_STALE_HOURS`時間以内 → プログラム終了（他のインスタンスが実行中）
-  - ロックファイルが存在し、`LOCK_STALE_HOURS`時間経過 → RuntimeError（古いロックファイルの検出）
-  - ロックファイルなし → ロックを取得して処理続行
-
-```bash
-# ロックファイルを手動で削除
-python -m src.main unlock
-```
-
-## GitHub Actions
-
-以下のワークフローが設定されています。
-
-### PR Quality Checks
-
-プルリクエスト作成時に自動実行される品質チェック。
-
-- **トリガー**: プルリクエスト作成・更新時
-- **チェック内容**:
-  - pytest（テスト）
-  - mypy（型チェック）
-  - ruff format（フォーマットチェック）
-  - ruff check（リント）
-
-### PR Tag Conflict Check
-
-mainブランチへのPR時にバージョンタグの重複をチェック。
-
-- **トリガー**: mainブランチへのプルリクエスト時
-- **内容**: `pyproject.toml`のバージョンが既存のgitタグと重複していないか確認
-
-### Docker Release
-
-mainブランチへのマージ時にDockerイメージをビルド・プッシュし、GitHub Releaseを作成。
-
-- **トリガー**: mainブランチへのpush、または手動実行
-- **内容**:
-  - Dockerイメージのビルド
-  - Docker Hubへのプッシュ（`latest`タグとバージョンタグ）
-  - gitタグの作成
-  - GitHub Releaseの作成
-
-#### 必要なSecrets
-
-| Secret名 | 説明 |
-|---------|------|
-| `DOCKERHUB_TOKEN` | Docker Hubのアクセストークン |
+- [ロック機能](docs/lock.md) - 二重起動防止の仕様
+- [GitHub Actions](docs/github_actions.md) - CI/CDワークフローの詳細
+- [Google OAuth セットアップ](docs/google_oauth_setup.md) - 認証情報の取得方法
 
 ## テスト
 
@@ -201,4 +153,4 @@ uv run pytest
 
 ## ライセンス
 
-MIT License
+[MIT License](LICENSE)

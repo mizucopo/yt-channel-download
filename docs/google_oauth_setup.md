@@ -35,9 +35,48 @@
 
 ## 5. リフレッシュトークン取得
 
-1. 以下を実行
+### 前提条件
+
+`.env` ファイルに以下が設定されていること：
+
+```bash
+GOOGLE_OAUTH_CLIENT_ID=your_client_id
+GOOGLE_OAUTH_CLIENT_SECRET=your_client_secret
+```
+
+> [!NOTE]
+> `GOOGLE_REFRESH_TOKEN` はまだ設定不要（この手順で取得します）
+
+### 実行手順
+
+1. **認証コマンドを実行**
    ```bash
    uv run python -m src.main auth
    ```
-2. 表示される URL でコードを入力しログイン
-3. 取得した `GOOGLE_REFRESH_TOKEN` を `.env` に設定
+
+2. **表示される URL にアクセス**
+   ```
+   Please visit this URL to authorize this application:
+   https://www.google.com/device?user_code=XXXX-XXXX
+   ```
+
+3. **Google アカウントでログインし、コードを入力**
+
+4. **リフレッシュトークンを `.env` に設定**
+   ```
+   Authentication successful!
+   Please add the following to your .env file:
+   GOOGLE_REFRESH_TOKEN=1//0...
+   ```
+
+### Docker 環境の場合
+
+```bash
+docker run --rm -it \
+  -e GOOGLE_OAUTH_CLIENT_ID="your_client_id" \
+  -e GOOGLE_OAUTH_CLIENT_SECRET="your_client_secret" \
+  mizucopo/yt-live-download auth
+```
+
+> [!NOTE]
+> `-it` オプションで対話モードを有効にする必要があります
