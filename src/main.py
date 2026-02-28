@@ -34,8 +34,13 @@ from src.utils.path_manager import PathManager
 class Main:
     """CLIアプリケーションクラス."""
 
-    def __init__(self) -> None:
-        """アプリケーションを初期化する."""
+    def __init__(self, verbose: bool = False) -> None:
+        """アプリケーションを初期化する.
+
+        Args:
+            verbose: 詳細ログを有効にするかどうか
+        """
+        self._verbose = verbose
         self._settings = Settings.from_env()
         self._path_manager = PathManager(
             download_dir=Path(self._settings.download_dir),
@@ -100,13 +105,9 @@ class Main:
             refresh_token=self._settings.google_refresh_token,
         )
 
-    def initialize(self, verbose: bool) -> None:
-        """アプリケーションを初期化する.
-
-        Args:
-            verbose: 詳細ログを有効にするかどうか
-        """
-        level = logging.DEBUG if verbose else logging.INFO
+    def initialize(self) -> None:
+        """アプリケーションを初期化する."""
+        level = logging.DEBUG if self._verbose else logging.INFO
         LoggingConfigurator(level=level)
 
         self._path_manager.ensure_directories()
@@ -245,8 +246,7 @@ def cli(ctx: click.Context, verbose: bool) -> None:
     YouTubeライブアーカイブを自動的にダウンロードし、
     Google Driveへアップロードする。
     """
-    app = Main()
-    app.initialize(verbose)
+    app = Main(verbose=verbose)
     ctx.obj = app
 
 
@@ -254,6 +254,7 @@ def cli(ctx: click.Context, verbose: bool) -> None:
 @click.pass_obj
 def run(app: Main) -> None:
     """全パイプラインを実行する."""
+    app.initialize()
     app.run()
 
 
@@ -261,6 +262,7 @@ def run(app: Main) -> None:
 @click.pass_obj
 def status(app: Main) -> None:
     """現在のステータスを表示する."""
+    app.initialize()
     app.status()
 
 
@@ -268,6 +270,7 @@ def status(app: Main) -> None:
 @click.pass_obj
 def unlock(app: Main) -> None:
     """ロックファイルを削除する."""
+    app.initialize()
     app.unlock()
 
 
