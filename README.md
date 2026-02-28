@@ -22,6 +22,7 @@ canceled (初回検出時のスキップ状態)
 
 **ローカル実行の場合:**
 - Python 3.14+
+- yt-dlp（動画ダウンロード用）
 - ffmpeg（サムネイル抽出用）
 - Google OAuth認証情報
 
@@ -43,6 +44,12 @@ uv sync
 ## 設定
 
 環境変数または`.env`ファイルで設定します。
+
+```bash
+# .env.example をコピーして設定
+cp .env.example .env
+# .env を編集して必要な値を設定
+```
 
 > **初回セットアップ時**: Google OAuth 認証情報の取得方法は [docs/google_oauth_setup.md](docs/google_oauth_setup.md) を参照してください。
 
