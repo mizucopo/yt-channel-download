@@ -8,8 +8,8 @@ from collections.abc import Sequence
 
 from mizu_common import YouTubeClient
 
-from src.models.stream import Stream
 from src.constants.stream_status import StreamStatus
+from src.models.stream import Stream
 from src.repository.stream_repository import StreamRepository
 
 logger = logging.getLogger(__name__)

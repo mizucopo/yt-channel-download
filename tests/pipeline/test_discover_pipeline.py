@@ -7,8 +7,8 @@ from unittest.mock import Mock
 import pytest
 from mizu_common import YouTubeVideoInfo as VideoInfo
 
+from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
-from src.models.stream_status import StreamStatus
 from src.pipeline.discover_pipeline import DiscoverPipeline
 from src.repository.stream_repository import StreamRepository
 

@@ -237,6 +237,21 @@ class Main:
             click.echo("\nAuthentication failed.", err=True)
             raise SystemExit(1)
 
+    def redownload(self, video_id: str) -> None:
+        """指定された動画を再ダウンロード対象にする."""
+        repository = self.get_repository()
+
+        stream = repository.get(video_id)
+        if stream is None:
+            click.echo(f"Error: Video {video_id} not found in database.", err=True)
+            raise SystemExit(1)
+
+        if repository.reset_for_redownload(video_id):
+            click.echo(f"Video {video_id} has been reset for redownload.")
+        else:
+            click.echo(f"Error: Failed to reset video {video_id}.", err=True)
+            raise SystemExit(1)
+
 
 @click.group()
 @click.option("-v", "--verbose", is_flag=True, help="詳細ログを有効にする")
@@ -280,6 +295,15 @@ def unlock(app: Main) -> None:
 def auth(app: Main) -> None:
     """Google OAuth認証を実行する."""
     app.auth_cmd()
+
+
+@cli.command()
+@click.argument("video_id")
+@click.pass_obj
+def redownload(app: Main, video_id: str) -> None:
+    """指定された動画を再ダウンロード対象にする."""
+    app.initialize()
+    app.redownload(video_id)
 
 
 if __name__ == "__main__":

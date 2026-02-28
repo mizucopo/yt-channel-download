@@ -5,8 +5,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
-from src.models.stream_status import StreamStatus
 from src.pipeline.upload_pipeline import UploadPipeline
 from src.repository.stream_repository import StreamRepository
 

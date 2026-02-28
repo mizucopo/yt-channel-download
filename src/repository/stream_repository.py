@@ -8,8 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.models.stream import Stream
 from src.constants.stream_status import StreamStatus
+from src.models.stream import Stream
 
 
 class StreamRepository:
@@ -264,5 +264,34 @@ class StreamRepository:
             cursor = conn.execute("SELECT COUNT(*) FROM streams")
             count = cursor.fetchone()[0]
             return int(count) == 0
+        finally:
+            conn.close()
+
+    def reset_for_redownload(self, video_id: str) -> bool:
+        """再ダウンロード用にストリームをリセットする.
+
+        Args:
+            video_id: YouTube動画ID
+
+        Returns:
+            リセットが成功した場合はTrue
+        """
+        conn = self._get_connection()
+        try:
+            now = datetime.now().isoformat()
+            cursor = conn.execute(
+                """
+                UPDATE streams
+                SET status = ?,
+                    local_path = NULL,
+                    error_message = NULL,
+                    retry_count = 0,
+                    updated_at = ?
+                WHERE video_id = ?
+                """,
+                (StreamStatus.DISCOVERED.value, now, video_id),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
         finally:
             conn.close()

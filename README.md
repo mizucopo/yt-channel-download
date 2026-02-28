@@ -84,6 +84,9 @@ uv run python -m src.main status
 # ロックファイル削除
 uv run python -m src.main unlock
 
+# 再ダウンロード対象に設定
+uv run python -m src.main redownload VIDEO_ID
+
 # Google OAuth認証
 uv run python -m src.main auth
 ```
