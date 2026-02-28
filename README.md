@@ -68,6 +68,8 @@ cp .env.example .env
 | `MAX_RETRIES` | 最大リトライ回数 | `3` |
 | `LOCK_STALE_HOURS` | ロックファイルの有効期限（時間） | `3` |
 
+> **チャンネルIDの取得方法**: [docs/channel_id_setup.md](docs/channel_id_setup.md) を参照してください。
+
 ## 使用方法
 
 ### CLIコマンド
@@ -138,6 +140,7 @@ docker run --rm \
 
 ## 詳細ドキュメント
 
+- [チャンネルIDの取得](docs/channel_id_setup.md) - YouTubeチャンネルIDの調べ方
 - [ロック機能](docs/lock.md) - 二重起動防止の仕様
 - [GitHub Actions](docs/github_actions.md) - CI/CDワークフローの詳細
 - [Google OAuth セットアップ](docs/google_oauth_setup.md) - 認証情報の取得方法
