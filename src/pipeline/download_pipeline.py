@@ -55,7 +55,7 @@ class DownloadPipeline:
             return False
 
         try:
-            output_path = self._download_dir / f"{video_id}.mp4"
+            output_template = self._download_dir / f"{video_id}.%(ext)s"
             url = f"https://www.youtube.com/watch?v={video_id}"
 
             logger.info("Downloading video: %s", video_id)
@@ -65,7 +65,9 @@ class DownloadPipeline:
                     "-f",
                     self.DEFAULT_VIDEO_FORMAT,
                     "-o",
-                    str(output_path),
+                    str(output_template),
+                    "--print",
+                    "filepath",
                     "--no-playlist",
                     "--no-warnings",
                     url,
@@ -88,12 +90,15 @@ class DownloadPipeline:
                 )
                 return False
 
+            # yt-dlpが出力した実際のファイルパスを取得
+            actual_path = result.stdout.strip()
+
             # CAS更新: downloading -> downloaded
             self._repository.update_status(
                 video_id,
                 StreamStatus.DOWNLOADED,
                 expected_old_status=StreamStatus.DOWNLOADING,
-                local_path=str(output_path),
+                local_path=actual_path,
             )
             logger.info("Download completed: %s", video_id)
             return True
