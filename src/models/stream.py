@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from src.models.stream_status import StreamStatus
+from src.constants.stream_status import StreamStatus
 
 
 @dataclass(frozen=True)

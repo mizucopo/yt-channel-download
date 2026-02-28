@@ -19,7 +19,7 @@ from mizu_common import (
 )
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
-from src.models.stream_status import StreamStatus
+from src.constants.stream_status import StreamStatus
 from src.pipeline.cleanup_pipeline import CleanupPipeline
 from src.pipeline.discover_pipeline import DiscoverPipeline
 from src.pipeline.download_pipeline import DownloadPipeline

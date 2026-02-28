@@ -8,7 +8,7 @@ from pathlib import Path
 
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
-from src.models.stream_status import StreamStatus
+from src.constants.stream_status import StreamStatus
 from src.repository.stream_repository import StreamRepository
 
 logger = logging.getLogger(__name__)

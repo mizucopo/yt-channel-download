@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from src.models.stream import Stream
-from src.models.stream_status import StreamStatus
+from src.constants.stream_status import StreamStatus
 
 
 class StreamRepository:
