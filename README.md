@@ -19,8 +19,13 @@ discovered → downloading → downloaded → thumbs_done → uploading → uplo
 
 ## 必要条件
 
+**ローカル実行の場合:**
 - Python 3.14+
 - ffmpeg（サムネイル抽出用）
+- Google OAuth認証情報
+
+**Dockerの場合:**
+- Docker
 - Google OAuth認証情報
 
 ## インストール
@@ -89,6 +94,49 @@ python -m src.main upload-one VIDEO_ID
 ```bash
 # 詳細ログを有効にする
 python -m src.main -v run
+```
+
+## Docker
+
+Dockerイメージを使用して実行できます。
+
+```bash
+# イメージを取得
+docker pull mizucopo/yt-live-download
+
+# ヘルプ表示
+docker run --rm mizucopo/yt-live-download --help
+
+# 全パイプラインを実行
+docker run --rm \
+  -e YOUTUBE_CHANNEL_IDS="channel_id1,channel_id2" \
+  -e GOOGLE_OAUTH_CLIENT_ID="your_client_id" \
+  -e GOOGLE_OAUTH_CLIENT_SECRET="your_client_secret" \
+  -e GOOGLE_REFRESH_TOKEN="your_refresh_token" \
+  -e GDRIVE_ROOT_FOLDER_ID="your_folder_id" \
+  -v ./data:/app/data \
+  mizucopo/yt-live-download run
+
+# 詳細ログを有効にする
+docker run --rm \
+  -e YOUTUBE_CHANNEL_IDS="..." \
+  -e GOOGLE_OAUTH_CLIENT_ID="..." \
+  -e GOOGLE_OAUTH_CLIENT_SECRET="..." \
+  -e GOOGLE_REFRESH_TOKEN="..." \
+  -e GDRIVE_ROOT_FOLDER_ID="..." \
+  -v ./data:/app/data \
+  mizucopo/yt-live-download -v run
+```
+
+### 環境変数ファイルの使用
+
+`.env` ファイルを使用する場合：
+
+```bash
+docker run --rm \
+  --env-file .env \
+  -v ./data:/app/data \
+  mizucopo/yt-live-download run
 ```
 
 ## ロック機能
