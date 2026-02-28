@@ -64,4 +64,4 @@ test = "ruff check --fix src tests stubs && ruff format src tests stubs && mypy 
 package = true
 
 [tool.uv.sources]
-mizu-common-py = { git = "https://github.com/mizucopo/mizu-common-py.git", tag = "2.1.2" }
+mizu-common-py = { git = "https://github.com/mizucopo/mizu-common-py.git", tag = "2.2.0" }
