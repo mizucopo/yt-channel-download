@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 class DownloadPipeline:
     """動画ダウンロードパイプライン."""
 
+    DEFAULT_VIDEO_FORMAT = "bv[height=1080][ext=webm]+ba[ext=webm]"
+
     def __init__(
         self,
         max_retries: int,
@@ -61,7 +63,7 @@ class DownloadPipeline:
                 [
                     "yt-dlp",
                     "-f",
-                    "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+                    self.DEFAULT_VIDEO_FORMAT,
                     "-o",
                     str(output_path),
                     "--no-playlist",
