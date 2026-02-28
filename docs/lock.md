@@ -14,7 +14,7 @@
 
 ```bash
 # ロックファイルを手動で削除
-python -m src.main unlock
+uv run python -m src.main unlock
 ```
 
 ## 設定

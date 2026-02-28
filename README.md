@@ -76,23 +76,23 @@ cp .env.example .env
 
 ```bash
 # 全パイプラインを実行（中断されたストリームの自動復旧を含む）
-python -m src.main run
+uv run python -m src.main run
 
 # ステータス確認
-python -m src.main status
+uv run python -m src.main status
 
 # ロックファイル削除
-python -m src.main unlock
+uv run python -m src.main unlock
 
 # Google OAuth認証
-python -m src.main auth
+uv run python -m src.main auth
 ```
 
 ### オプション
 
 ```bash
 # 詳細ログを有効にする
-python -m src.main -v run
+uv run python -m src.main -v run
 ```
 
 ## Docker
