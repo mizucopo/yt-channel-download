@@ -165,67 +165,6 @@ class Main:
 
             click.echo("Pipeline completed.")
 
-    def discover_cmd(self) -> None:
-        """新しいライブアーカイブを検出する."""
-        with self.acquire_lock():
-            repository = self.get_repository()
-            youtube_client = self.get_youtube_client()
-            count = DiscoverPipeline(
-                client=youtube_client,
-                channel_ids=self._settings.youtube_channel_ids,
-                repository=repository,
-            ).discover_all()
-            click.echo(f"Discovered {count} new videos.")
-
-    def download_cmd(self) -> None:
-        """待機中の動画をダウンロードする."""
-        with self.acquire_lock():
-            repository = self.get_repository()
-            count = DownloadPipeline(
-                max_retries=self._settings.max_retries,
-                download_dir=self._path_manager.download_dir,
-                repository=repository,
-            ).download_all()
-            click.echo(f"Downloaded {count} videos.")
-
-    def thumbs_cmd(self) -> None:
-        """サムネイルを抽出する."""
-        with self.acquire_lock():
-            repository = self.get_repository()
-            count = ThumbsPipeline(
-                max_retries=self._settings.max_retries,
-                thumbnail_interval=self._settings.thumbnail_interval,
-                thumbnail_dir=self._path_manager.thumbnail_dir,
-                repository=repository,
-            ).extract_all()
-            click.echo(f"Extracted thumbnails from {count} videos.")
-
-    def upload_cmd(self) -> None:
-        """Google Driveへアップロードする."""
-        with self.acquire_lock():
-            repository = self.get_repository()
-            gdrive_provider = self.get_gdrive_provider()
-            count = UploadPipeline(
-                max_retries=self._settings.max_retries,
-                gdrive_provider=gdrive_provider,
-                gdrive_root_folder_id=self._settings.gdrive_root_folder_id,
-                thumbnail_dir=self._path_manager.thumbnail_dir,
-                repository=repository,
-            ).upload_all()
-            click.echo(f"Uploaded {count} videos.")
-
-    def cleanup_cmd(self) -> None:
-        """ローカルファイルを削除する."""
-        with self.acquire_lock():
-            repository = self.get_repository()
-            count = CleanupPipeline(
-                max_retries=self._settings.max_retries,
-                download_dir=self._path_manager.download_dir,
-                thumbnail_dir=self._path_manager.thumbnail_dir,
-                repository=repository,
-            ).cleanup_all()
-            click.echo(f"Cleaned up {count} videos.")
-
     def recover_cmd(self) -> None:
         """中断されたストリームを回復する."""
         with self.acquire_lock():
@@ -236,52 +175,6 @@ class Main:
                 repository=repository,
             ).recover_all()
             click.echo(f"Recovered {count} streams.")
-
-    def download_one(self, video_id: str) -> None:
-        """指定された動画をダウンロードする.
-
-        Args:
-            video_id: YouTube動画ID
-        """
-        with self.acquire_lock():
-            repository = self.get_repository()
-            success = DownloadPipeline(
-                max_retries=self._settings.max_retries,
-                download_dir=self._path_manager.download_dir,
-                repository=repository,
-            ).download_video(video_id)
-            if success:
-                click.echo(f"Downloaded {video_id}")
-            else:
-                click.echo(f"Failed to download {video_id}", err=True)
-                raise SystemExit(1)
-
-    def upload_one(self, video_id: str) -> None:
-        """指定された動画をアップロードする.
-
-        Args:
-            video_id: YouTube動画ID
-        """
-        repository = self.get_repository()
-        stream = repository.get(video_id)
-        if stream is None or stream.local_path is None:
-            click.echo(f"Video {video_id} not found or not downloaded", err=True)
-            raise SystemExit(1)
-
-        with self.acquire_lock():
-            gdrive_provider = self.get_gdrive_provider()
-            success = UploadPipeline(
-                max_retries=self._settings.max_retries,
-                gdrive_provider=gdrive_provider,
-                gdrive_root_folder_id=self._settings.gdrive_root_folder_id,
-                thumbnail_dir=self._path_manager.thumbnail_dir,
-                repository=repository,
-            ).upload_video(video_id, stream.local_path)
-            if success:
-                click.echo(f"Uploaded {video_id}")
-            else:
-                click.echo(f"Failed to upload {video_id}", err=True)
-                raise SystemExit(1)
 
     def status(self) -> None:
         """現在のステータスを表示する."""
@@ -349,62 +242,11 @@ def run(app: Main) -> None:
     app.run()
 
 
-@cli.command("discover-cmd")
-@click.pass_obj
-def discover_cmd(app: Main) -> None:
-    """新しいライブアーカイブを検出する."""
-    app.discover_cmd()
-
-
-@cli.command("download-cmd")
-@click.pass_obj
-def download_cmd(app: Main) -> None:
-    """待機中の動画をダウンロードする."""
-    app.download_cmd()
-
-
-@cli.command("thumbs-cmd")
-@click.pass_obj
-def thumbs_cmd(app: Main) -> None:
-    """サムネイルを抽出する."""
-    app.thumbs_cmd()
-
-
-@cli.command("upload-cmd")
-@click.pass_obj
-def upload_cmd(app: Main) -> None:
-    """Google Driveへアップロードする."""
-    app.upload_cmd()
-
-
-@cli.command("cleanup-cmd")
-@click.pass_obj
-def cleanup_cmd(app: Main) -> None:
-    """ローカルファイルを削除する."""
-    app.cleanup_cmd()
-
-
 @cli.command("recover-cmd")
 @click.pass_obj
 def recover_cmd(app: Main) -> None:
     """中断されたストリームを回復する."""
     app.recover_cmd()
-
-
-@cli.command("download-one")
-@click.argument("video_id")
-@click.pass_obj
-def download_one(app: Main, video_id: str) -> None:
-    """指定された動画をダウンロードする."""
-    app.download_one(video_id)
-
-
-@cli.command("upload-one")
-@click.argument("video_id")
-@click.pass_obj
-def upload_one(app: Main, video_id: str) -> None:
-    """指定された動画をアップロードする."""
-    app.upload_one(video_id)
 
 
 @cli.command()
