@@ -20,6 +20,7 @@ class ThumbsPipeline:
         self,
         max_retries: int,
         thumbnail_interval: int,
+        thumbnail_quality: int,
         thumbnail_dir: Path,
         repository: StreamRepository,
     ) -> None:
@@ -28,11 +29,13 @@ class ThumbsPipeline:
         Args:
             max_retries: 最大リトライ回数
             thumbnail_interval: サムネイル抽出間隔（秒）
+            thumbnail_quality: サムネイル画質（1-31、小さいほど高画質）
             thumbnail_dir: サムネイル保存ディレクトリ
             repository: ストリームリポジトリ
         """
         self._max_retries = max_retries
         self._thumbnail_interval = thumbnail_interval
+        self._thumbnail_quality = thumbnail_quality
         self._thumbnail_dir = thumbnail_dir
         self._repository = repository
 
@@ -89,8 +92,8 @@ class ThumbsPipeline:
                     "-vf",
                     f"fps=1/{self._thumbnail_interval}",
                     "-q:v",
-                    "2",
-                    str(thumb_dir / "thumb_%04d.jpg"),
+                    str(self._thumbnail_quality),
+                    str(thumb_dir / "thumb_%08d.jpg"),
                 ],
                 capture_output=True,
                 text=True,

@@ -56,6 +56,7 @@ def test_extract_thumbnails_updates_status_on_success(
         success = ThumbsPipeline(
             max_retries=3,
             thumbnail_interval=60,
+            thumbnail_quality=2,
             thumbnail_dir=thumbnail_dir,
             repository=repository,
         ).extract_thumbnails("video1", "/path/to/video.mp4")
@@ -103,6 +104,7 @@ def test_extract_thumbnails_reverts_status_on_failure(
         success = ThumbsPipeline(
             max_retries=3,
             thumbnail_interval=60,
+            thumbnail_quality=2,
             thumbnail_dir=thumbnail_dir,
             repository=repository,
         ).extract_thumbnails("video1", "/path/to/video.mp4")

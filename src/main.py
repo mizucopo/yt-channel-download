@@ -164,6 +164,7 @@ class Main:
             thumbnailed = ThumbsPipeline(
                 max_retries=self._settings.max_retries,
                 thumbnail_interval=self._settings.thumbnail_interval,
+                thumbnail_quality=self._settings.thumbnail_quality,
                 thumbnail_dir=self._path_manager.thumbnail_dir,
                 repository=repository,
             ).extract_all()

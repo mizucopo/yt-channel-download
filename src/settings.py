@@ -33,6 +33,7 @@ class Settings(BaseModel):
 
     # ダウンロード設定
     thumbnail_interval: int
+    thumbnail_quality: int
     max_retries: int
 
     # ロック設定
@@ -78,6 +79,7 @@ class Settings(BaseModel):
             ],
             gdrive_root_folder_id=config("GDRIVE_ROOT_FOLDER_ID", default=""),
             thumbnail_interval=config("THUMBNAIL_INTERVAL", default=60, cast=int),
+            thumbnail_quality=config("THUMBNAIL_QUALITY", default=2, cast=int),
             max_retries=config("MAX_RETRIES", default=3, cast=int),
             lock_stale_hours=config("LOCK_STALE_HOURS", default=3, cast=int),
         )

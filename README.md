@@ -64,6 +64,7 @@ cp .env.example .env
 | `DOWNLOAD_DIR` | ダウンロードディレクトリ | `data/downloads` |
 | `THUMBNAIL_DIR` | サムネイルディレクトリ | `data/thumbnails` |
 | `THUMBNAIL_INTERVAL` | サムネイル抽出間隔（秒） | `60` |
+| `THUMBNAIL_QUALITY` | サムネイル画質（1-31、小さいほど高画質） | `2` |
 | `MAX_RETRIES` | 最大リトライ回数 | `3` |
 | `LOCK_STALE_HOURS` | ロックファイルの有効期限（時間） | `3` |
 
