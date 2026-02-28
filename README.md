@@ -21,7 +21,7 @@ discovered → downloading → downloaded → thumbs_done → uploading → uplo
 
 - Python 3.14+
 - ffmpeg（サムネイル抽出用）
-- Google Drive API認証情報
+- Google OAuth認証情報
 
 ## インストール
 
@@ -38,15 +38,18 @@ uv sync
 
 環境変数または`.env`ファイルで設定します。
 
+> **初回セットアップ時**: Google OAuth 認証情報の取得方法は [docs/google_oauth_setup.md](docs/google_oauth_setup.md) を参照してください。
+
 | 環境変数 | 説明 | デフォルト |
 |---------|------|-----------|
-| `YOUTUBE_API_KEY` | YouTube Data API v3キー | （必須） |
 | `YOUTUBE_CHANNEL_IDS` | 対象チャンネルID（カンマ区切り） | （必須） |
+| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth クライアントID | （必須） |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth クライアントシークレット | `` |
+| `GOOGLE_REFRESH_TOKEN` | Google OAuth リフレッシュトークン | （必須） |
+| `GDRIVE_ROOT_FOLDER_ID` | Google DriveルートフォルダID | （必須） |
 | `DATABASE_PATH` | データベースファイルパス | `data/streams.db` |
 | `DOWNLOAD_DIR` | ダウンロードディレクトリ | `data/downloads` |
 | `THUMBNAIL_DIR` | サムネイルディレクトリ | `data/thumbnails` |
-| `GDRIVE_CREDENTIALS_PATH` | Google Drive認証情報パス | `credentials.json` |
-| `GDRIVE_ROOT_FOLDER_ID` | Google DriveルートフォルダID | （必須） |
 | `THUMBNAIL_INTERVAL` | サムネイル抽出間隔（秒） | `60` |
 | `MAX_RETRIES` | 最大リトライ回数 | `3` |
 | `LOCK_STALE_HOURS` | ロックファイルの有効期限（時間） | `3` |
@@ -72,6 +75,9 @@ python -m src.main status
 
 # ロックファイル削除
 python -m src.main unlock
+
+# Google OAuth認証
+python -m src.main auth
 
 # 個別動画の操作
 python -m src.main download-one VIDEO_ID
