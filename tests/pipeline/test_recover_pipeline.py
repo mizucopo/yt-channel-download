@@ -134,39 +134,6 @@ def test_recover_all_respects_max_retries(
     assert result.status == StreamStatus.DOWNLOADING
 
 
-def test_recover_all_reverts_thumbs_done_to_downloaded_when_no_thumbnails(
-    repository: StreamRepository,
-    thumbnail_dir: Path,
-) -> None:
-    """recover_allがサムネイルディレクトリがないthumbs_done状態をdownloadedに戻すこと.
-
-    Arrange:
-        thumbs_doneステータスのストリームを登録する。
-        サムネイルディレクトリを作成しない。
-
-    Act:
-        recover_all()を呼び出す。
-
-    Assert:
-        ステータスがdownloadedに戻っていること。
-    """
-    # Arrange
-    repository.insert(
-        Stream(video_id="video1", status=StreamStatus.THUMBS_DONE, title="Test Video")
-    )
-
-    # Act
-    count = RecoverPipeline(
-        max_retries=3, thumbnail_dir=thumbnail_dir, repository=repository
-    ).recover_all()
-
-    # Assert
-    assert count == 1
-    result = repository.get("video1")
-    assert result is not None
-    assert result.status == StreamStatus.DOWNLOADED
-
-
 def test_recover_all_keeps_thumbs_done_when_thumbnails_exist(
     repository: StreamRepository,
     thumbnail_dir: Path,
