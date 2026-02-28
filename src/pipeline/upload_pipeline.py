@@ -78,28 +78,28 @@ class UploadPipeline:
                 raise FileNotFoundError(f"Video file not found: {local_path}")
 
             logger.info("Uploading video: %s", video_id)
-            video_gdrive_id = self._gdrive_provider.upload_file(
-                file_path=str(video_file),
-                parent_folder_id=self._gdrive_root_folder_id,
-                file_name=video_file.name,
+            self._gdrive_provider.upload(
+                source_path=str(video_file),
+                destination_filename=video_file.name,
             )
 
-            # サムネイルフォルダをアップロード
+            # サムネイルファイルを個別にアップロード
             thumb_dir = self._get_thumbnail_dir(video_id)
             if thumb_dir.exists():
                 logger.info("Uploading thumbnails: %s", video_id)
-                self._gdrive_provider.upload_directory(
-                    directory_path=str(thumb_dir),
-                    parent_folder_id=self._gdrive_root_folder_id,
-                    folder_name=f"{video_id}_thumbnails",
-                )
+                for thumb_file in sorted(thumb_dir.iterdir()):
+                    if thumb_file.is_file():
+                        self._gdrive_provider.upload(
+                            source_path=str(thumb_file),
+                            destination_filename=f"{video_id}_thumbnails/{thumb_file.name}",
+                        )
 
             # CAS更新: uploading -> uploaded
             self._repository.update_status(
                 video_id,
                 StreamStatus.UPLOADED,
                 expected_old_status=StreamStatus.UPLOADING,
-                gdrive_file_id=video_gdrive_id,
+                gdrive_file_id="",  # 新APIではファイルIDを返さない
                 gdrive_file_name=video_file.name,
             )
             logger.info("Upload completed: %s", video_id)

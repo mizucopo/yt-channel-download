@@ -87,10 +87,18 @@ class Main:
         """YouTubeクライアントを取得する."""
         return YouTubeClient(oauth_client=self.get_oauth_client())
 
-    def get_gdrive_provider(self) -> GoogleDriveProvider:
-        """Google Driveプロバイダーを取得する."""
-        access_token = self.get_oauth_client().get_access_token()
-        return GoogleDriveProvider(access_token=access_token)
+    def get_gdrive_provider(self, folder_id: str) -> GoogleDriveProvider:
+        """Google Driveプロバイダーを取得する.
+
+        Args:
+            folder_id: Google Drive フォルダ ID
+        """
+        return GoogleDriveProvider.from_credentials(
+            folder_id=folder_id,
+            client_id=self._settings.google_oauth_client_id,
+            client_secret=self._settings.google_oauth_client_secret or "",
+            refresh_token=self._settings.google_refresh_token,
+        )
 
     def initialize(self, verbose: bool) -> None:
         """アプリケーションを初期化する.
@@ -118,7 +126,9 @@ class Main:
             repository = self.get_repository()
             is_first_run = repository.is_empty()
             youtube_client = self.get_youtube_client()
-            gdrive_provider = self.get_gdrive_provider()
+            gdrive_provider = self.get_gdrive_provider(
+                folder_id=self._settings.gdrive_root_folder_id
+            )
 
             click.echo("Recovering streams...")
             recovered = RecoverPipeline(

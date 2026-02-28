@@ -50,7 +50,6 @@ def test_upload_video_updates_status_on_success(
     )
 
     mock_provider = Mock()
-    mock_provider.upload_file.return_value = "gdrive_file_id"
 
     thumbnail_dir = tmp_path / "thumbnails"
 
@@ -68,7 +67,11 @@ def test_upload_video_updates_status_on_success(
     result = repository.get("video1")
     assert result is not None
     assert result.status == StreamStatus.UPLOADED
-    assert result.gdrive_file_id == "gdrive_file_id"
+    assert result.gdrive_file_id == ""  # 新APIではファイルIDを返さない
+    mock_provider.upload.assert_called_once_with(
+        source_path=str(video_path),
+        destination_filename="video.mp4",
+    )
 
 
 def test_upload_video_reverts_status_on_failure(
@@ -101,7 +104,7 @@ def test_upload_video_reverts_status_on_failure(
     )
 
     mock_provider = Mock()
-    mock_provider.upload_file.side_effect = Exception("Upload failed")
+    mock_provider.upload.side_effect = Exception("Upload failed")
 
     thumbnail_dir = tmp_path / "thumbnails"
 
