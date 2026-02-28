@@ -116,6 +116,7 @@ class Main:
             click.echo("Starting full pipeline...")
 
             repository = self.get_repository()
+            is_first_run = repository.is_empty()
             youtube_client = self.get_youtube_client()
             gdrive_provider = self.get_gdrive_provider()
 
@@ -132,8 +133,14 @@ class Main:
                 client=youtube_client,
                 channel_ids=self._settings.youtube_channel_ids,
                 repository=repository,
+                is_first_run=is_first_run,
             ).discover_all()
-            click.echo(f"  Discovered: {discovered} new videos")
+            if is_first_run and discovered > 0:
+                click.echo(
+                    f"  First run: {discovered} existing videos registered as canceled"
+                )
+            else:
+                click.echo(f"  Discovered: {discovered} new videos")
 
             click.echo("Downloading videos...")
             downloaded = DownloadPipeline(

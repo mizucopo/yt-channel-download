@@ -98,3 +98,83 @@ def test_discover_all_skips_existing_videos(repository: StreamRepository) -> Non
 
     # Assert
     assert count == 0
+
+
+def test_discover_all_registers_as_canceled_on_first_run(
+    repository: StreamRepository,
+) -> None:
+    """初回起動時に動画がCANCELEDで登録されること.
+
+    Arrange:
+        YouTube APIクライアントのモックを準備する。
+
+    Act:
+        is_first_run=Trueでdiscover_all()を呼び出す。
+
+    Assert:
+        動画がCANCELEDステータスで登録されること。
+    """
+    # Arrange
+    mock_client = Mock()
+    mock_client.get_live_archives.return_value = [
+        VideoInfo(
+            video_id="video1",
+            title="Test Video 1",
+            published_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            duration="PT1H",
+        ),
+    ]
+
+    # Act
+    count = DiscoverPipeline(
+        client=mock_client,
+        channel_ids=["channel1"],
+        repository=repository,
+        is_first_run=True,
+    ).discover_all()
+
+    # Assert
+    assert count == 1
+    result = repository.get("video1")
+    assert result is not None
+    assert result.status == StreamStatus.CANCELED
+
+
+def test_discover_all_registers_as_discovered_on_normal_run(
+    repository: StreamRepository,
+) -> None:
+    """通常実行時に動画がDISCOVEREDで登録されること.
+
+    Arrange:
+        YouTube APIクライアントのモックを準備する。
+
+    Act:
+        is_first_run=Falseでdiscover_all()を呼び出す。
+
+    Assert:
+        動画がDISCOVEREDステータスで登録されること。
+    """
+    # Arrange
+    mock_client = Mock()
+    mock_client.get_live_archives.return_value = [
+        VideoInfo(
+            video_id="video1",
+            title="Test Video 1",
+            published_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            duration="PT1H",
+        ),
+    ]
+
+    # Act
+    count = DiscoverPipeline(
+        client=mock_client,
+        channel_ids=["channel1"],
+        repository=repository,
+        is_first_run=False,
+    ).discover_all()
+
+    # Assert
+    assert count == 1
+    result = repository.get("video1")
+    assert result is not None
+    assert result.status == StreamStatus.DISCOVERED

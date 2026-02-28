@@ -252,3 +252,17 @@ class StreamRepository:
             return self._row_to_stream(row)
         finally:
             conn.close()
+
+    def is_empty(self) -> bool:
+        """ストリームテーブルが空かどうかを判定する.
+
+        Returns:
+            テーブルが空の場合はTrue、レコードが存在する場合はFalse
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute("SELECT COUNT(*) FROM streams")
+            count = cursor.fetchone()[0]
+            return int(count) == 0
+        finally:
+            conn.close()

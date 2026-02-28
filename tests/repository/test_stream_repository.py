@@ -258,3 +258,48 @@ def test_get_next_pending_respects_max_retries(repository: StreamRepository) -> 
     # Assert
     assert result is not None
     assert result.video_id == "video2"
+
+
+def test_is_empty_returns_true_for_empty_table(repository: StreamRepository) -> None:
+    """空のテーブルでTrueが返されること.
+
+    Arrange:
+        レコードが存在しない状態のリポジトリを準備する。
+
+    Act:
+        is_empty()を呼び出す。
+
+    Assert:
+        Trueが返されること。
+    """
+    # Act
+    result = repository.is_empty()
+
+    # Assert
+    assert result is True
+
+
+def test_is_empty_returns_false_for_non_empty_table(
+    repository: StreamRepository,
+) -> None:
+    """レコードが存在する場合Falseが返されること.
+
+    Arrange:
+        ストリームを1件登録する。
+
+    Act:
+        is_empty()を呼び出す。
+
+    Assert:
+        Falseが返されること。
+    """
+    # Arrange
+    repository.insert(
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Video 1")
+    )
+
+    # Act
+    result = repository.is_empty()
+
+    # Assert
+    assert result is False

@@ -23,6 +23,7 @@ class DiscoverPipeline:
         client: YouTubeClient,
         channel_ids: Sequence[str],
         repository: StreamRepository,
+        is_first_run: bool = False,
     ) -> None:
         """パイプラインを初期化する.
 
@@ -30,10 +31,12 @@ class DiscoverPipeline:
             client: YouTube APIクライアント
             channel_ids: 検出対象のチャンネルIDリスト
             repository: ストリームリポジトリ
+            is_first_run: 初回起動かどうか（Trueの場合、動画をCANCELEDで登録）
         """
         self._client = client
         self._channel_ids = channel_ids
         self._repository = repository
+        self._is_first_run = is_first_run
 
     def discover_all(self) -> int:
         """新しいライブアーカイブを検出して登録する.
@@ -41,6 +44,9 @@ class DiscoverPipeline:
         Returns:
             新規登録された動画数
         """
+        initial_status = (
+            StreamStatus.CANCELED if self._is_first_run else StreamStatus.DISCOVERED
+        )
         count = 0
         for channel_id in self._channel_ids:
             logger.info("Discovering videos for channel: %s", channel_id)
@@ -53,7 +59,7 @@ class DiscoverPipeline:
 
                 stream = Stream(
                     video_id=video.video_id,
-                    status=StreamStatus.DISCOVERED,
+                    status=initial_status,
                     title=video.title,
                     published_at=video.published_at.isoformat(),
                 )

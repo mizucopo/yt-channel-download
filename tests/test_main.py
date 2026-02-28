@@ -59,6 +59,7 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
     """
     # Arrange
     mock_repository = MagicMock()
+    mock_repository.is_empty.return_value = False
     mock_youtube_client = MagicMock()
     mock_gdrive_provider = MagicMock()
 
@@ -90,11 +91,112 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
             client=mock_youtube_client,
             channel_ids=app.settings.youtube_channel_ids,
             repository=mock_repository,
+            is_first_run=False,
         )
         mock_download.assert_called_once()
         mock_thumbs.assert_called_once()
         mock_upload.assert_called_once()
         mock_cleanup.assert_called_once()
+
+
+def test_run_passes_is_first_run_true_on_empty_database(app: Main) -> None:
+    """空のデータベースでis_first_run=Trueが渡されること.
+
+    Arrange:
+        リポジトリのis_empty()がTrueを返すようにモックする。
+        各パイプラインをモックする。
+
+    Act:
+        run()を呼び出す。
+
+    Assert:
+        DiscoverPipelineにis_first_run=Trueが渡されること。
+    """
+    # Arrange
+    mock_repository = MagicMock()
+    mock_repository.is_empty.return_value = True
+    mock_youtube_client = MagicMock()
+    mock_gdrive_provider = MagicMock()
+
+    with (
+        patch.object(app, "acquire_lock"),
+        patch.object(app, "get_repository", return_value=mock_repository),
+        patch.object(app, "get_youtube_client", return_value=mock_youtube_client),
+        patch.object(app, "get_gdrive_provider", return_value=mock_gdrive_provider),
+        patch("src.main.RecoverPipeline") as mock_recover,
+        patch("src.main.DiscoverPipeline") as mock_discover,
+        patch("src.main.DownloadPipeline") as mock_download,
+        patch("src.main.ThumbsPipeline") as mock_thumbs,
+        patch("src.main.UploadPipeline") as mock_upload,
+        patch("src.main.CleanupPipeline") as mock_cleanup,
+    ):
+        mock_recover.return_value.recover_all.return_value = 0
+        mock_discover.return_value.discover_all.return_value = 5
+        mock_download.return_value.download_all.return_value = 0
+        mock_thumbs.return_value.extract_all.return_value = 0
+        mock_upload.return_value.upload_all.return_value = 0
+        mock_cleanup.return_value.cleanup_all.return_value = 0
+
+        # Act
+        app.run()
+
+        # Assert
+        mock_discover.assert_called_once_with(
+            client=mock_youtube_client,
+            channel_ids=app.settings.youtube_channel_ids,
+            repository=mock_repository,
+            is_first_run=True,
+        )
+
+
+def test_run_passes_is_first_run_false_on_existing_database(app: Main) -> None:
+    """既存データがある場合is_first_run=Falseが渡されること.
+
+    Arrange:
+        リポジトリのis_empty()がFalseを返すようにモックする。
+        各パイプラインをモックする。
+
+    Act:
+        run()を呼び出す。
+
+    Assert:
+        DiscoverPipelineにis_first_run=Falseが渡されること。
+    """
+    # Arrange
+    mock_repository = MagicMock()
+    mock_repository.is_empty.return_value = False
+    mock_youtube_client = MagicMock()
+    mock_gdrive_provider = MagicMock()
+
+    with (
+        patch.object(app, "acquire_lock"),
+        patch.object(app, "get_repository", return_value=mock_repository),
+        patch.object(app, "get_youtube_client", return_value=mock_youtube_client),
+        patch.object(app, "get_gdrive_provider", return_value=mock_gdrive_provider),
+        patch("src.main.RecoverPipeline") as mock_recover,
+        patch("src.main.DiscoverPipeline") as mock_discover,
+        patch("src.main.DownloadPipeline") as mock_download,
+        patch("src.main.ThumbsPipeline") as mock_thumbs,
+        patch("src.main.UploadPipeline") as mock_upload,
+        patch("src.main.CleanupPipeline") as mock_cleanup,
+    ):
+        mock_recover.return_value.recover_all.return_value = 0
+        mock_discover.return_value.discover_all.return_value = 1
+        mock_download.return_value.download_all.return_value = 0
+        mock_thumbs.return_value.extract_all.return_value = 0
+        mock_upload.return_value.upload_all.return_value = 0
+        mock_cleanup.return_value.cleanup_all.return_value = 0
+
+        # Act
+        app.run()
+
+        # Assert
+        mock_discover.assert_called_once_with(
+            client=mock_youtube_client,
+            channel_ids=app.settings.youtube_channel_ids,
+            repository=mock_repository,
+            is_first_run=False,
+        )
 
 
 def test_auth_cmd_succeeds_with_valid_credentials(app: Main) -> None:

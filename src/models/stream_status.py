@@ -13,3 +13,4 @@ class StreamStatus(str, Enum):
     UPLOADING = "uploading"
     UPLOADED = "uploaded"
     CLEANED = "cleaned"
+    CANCELED = "canceled"
