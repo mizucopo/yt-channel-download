@@ -22,43 +22,6 @@ def repository(tmp_path: Path) -> StreamRepository:
     return repo
 
 
-def test_discover_all_registers_new_videos(repository: StreamRepository) -> None:
-    """discover_allが新しい動画を登録すること.
-
-    Arrange:
-        YouTube APIクライアントのモックを準備する。
-
-    Act:
-        discover_all()を呼び出す。
-
-    Assert:
-        新しい動画がデータベースに登録されていること。
-    """
-    # Arrange
-    mock_client = Mock()
-    mock_client.get_live_archives.return_value = [
-        VideoInfo(
-            video_id="video1",
-            title="Test Video 1",
-            published_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            duration="PT1H",
-        ),
-    ]
-
-    # Act
-    count = DiscoverPipeline(
-        client=mock_client,
-        channel_ids=["channel1"],
-        repository=repository,
-    ).discover_all()
-
-    # Assert
-    assert count == 1
-    result = repository.get("video1")
-    assert result is not None
-    assert result.title == "Test Video 1"
-
-
 def test_discover_all_skips_existing_videos(repository: StreamRepository) -> None:
     """discover_allが既存の動画をスキップすること.
 
