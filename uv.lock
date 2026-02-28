@@ -185,6 +185,20 @@ wheels = [
 ]
 
 [[package]]
+name = "google-api-python-client-stubs"
+version = "1.32.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-python-client" },
+    { name = "types-httplib2" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4b/b6/c7a7266571fbf45230e46657b6229004034ebd0545b9c508cff3c32ccd3c/google_api_python_client_stubs-1.32.0.tar.gz", hash = "sha256:1c1840b12ec110019340a404558e270fc812a6365ad6888f632e16bb5e420a71", size = 2546474, upload-time = "2026-02-15T11:04:16.782Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/99/29cb99791e5292b188dc52260150c82f565588086c8a537e37d88e746b01/google_api_python_client_stubs-1.32.0-py3-none-any.whl", hash = "sha256:d7024eb0fa3a66ee57f5949cd84b01b8138085e4f186b99747dc7b6c740d5e8f", size = 3533423, upload-time = "2026-02-15T11:04:18.087Z" },
+]
+
+[[package]]
 name = "google-auth"
 version = "2.48.0"
 source = { registry = "https://pypi.org/simple" }
@@ -289,14 +303,17 @@ wheels = [
 
 [[package]]
 name = "mizu-common-py"
-version = "2.0.0"
-source = { git = "https://github.com/mizucopo/mizu-common-py.git?tag=2.0.0#8a8fcbf06580f8f6ec29b0170becedf2db1b6c45" }
+version = "2.1.0"
+source = { git = "https://github.com/mizucopo/mizu-common-py.git?tag=2.1.0#6acc4488e5f9f230a26f397ab23168611f3259f5" }
 dependencies = [
     { name = "google-api-python-client" },
+    { name = "google-api-python-client-stubs" },
     { name = "google-auth" },
     { name = "portalocker" },
     { name = "python-decouple" },
+    { name = "python-decouple-stubs" },
     { name = "requests" },
+    { name = "types-requests" },
 ]
 
 [[package]]
@@ -675,6 +692,15 @@ wheels = [
 ]
 
 [[package]]
+name = "types-httplib2"
+version = "0.31.2.20260125"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/15/6a1b0c6e873af63f6fb5e3f12574e918d015887a9e164c36cbaf0fb4acae/types_httplib2-0.31.2.20260125.tar.gz", hash = "sha256:5bb567525c0a2cc3209c9c80016d43a8e69543090c8433993488a4637dc30300", size = 10646, upload-time = "2026-01-25T03:43:56.635Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/ec/f7a78d2cedf127a02b8a63bc634262a624fb614d904cf68db8a01d4af7fc/types_httplib2-0.31.2.20260125-py3-none-any.whl", hash = "sha256:dfec71909f7d624d25dfd1962fc543f9924337c39e5b24db6f7c300d686b7f65", size = 10651, upload-time = "2026-01-25T03:43:55.792Z" },
+]
+
+[[package]]
 name = "types-requests"
 version = "2.32.4.20260107"
 source = { registry = "https://pypi.org/simple" }
@@ -770,7 +796,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.0.0" },
-    { name = "mizu-common-py", git = "https://github.com/mizucopo/mizu-common-py.git?tag=2.0.0" },
+    { name = "mizu-common-py", git = "https://github.com/mizucopo/mizu-common-py.git?tag=2.1.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "python-decouple", specifier = ">=3.8" },
     { name = "yt-dlp", specifier = ">=2024.0.0" },
