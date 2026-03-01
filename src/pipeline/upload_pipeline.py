@@ -90,7 +90,7 @@ class UploadPipeline:
             logger.info("Uploading video: %s", video_id)
             self._gdrive_provider.upload(
                 source_path=str(video_file),
-                destination_filename=f"{folder_name}/{gdrive_filename}",
+                destination_filename=gdrive_filename,
             )
 
             # サムネイルファイルを個別にアップロード
@@ -101,7 +101,7 @@ class UploadPipeline:
                     if thumb_file.is_file():
                         self._gdrive_provider.upload(
                             source_path=str(thumb_file),
-                            destination_filename=f"{folder_name}/thumbnails/{thumb_file.name}",
+                            destination_filename=f"{folder_name}/{thumb_file.name}",
                         )
 
             # CAS更新: uploading -> uploaded
