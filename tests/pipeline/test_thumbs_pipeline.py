@@ -9,6 +9,7 @@ from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
 from src.pipeline.thumbs_pipeline import ThumbsPipeline
 from src.repository.stream_repository import StreamRepository
+from src.utils.path_manager import PathManager
 
 
 @pytest.fixture
@@ -57,11 +58,16 @@ def test_extract_thumbnails_updates_status_on_success(
 
     with patch("subprocess.run", return_value=mock_result):
         # Act
+        path_manager = PathManager(
+            download_dir=tmp_path / "downloads",
+            thumbnail_dir=thumbnail_dir,
+            database_path=tmp_path / "test.db",
+        )
         success = ThumbsPipeline(
             max_retries=3,
             thumbnail_interval=60,
             thumbnail_quality=2,
-            thumbnail_dir=thumbnail_dir,
+            path_manager=path_manager,
             repository=repository,
         ).extract_thumbnails("video1", str(video_file))
 
@@ -109,11 +115,16 @@ def test_extract_thumbnails_reverts_status_on_failure(
 
     with patch("subprocess.run", return_value=mock_result):
         # Act
+        path_manager = PathManager(
+            download_dir=tmp_path / "downloads",
+            thumbnail_dir=thumbnail_dir,
+            database_path=tmp_path / "test.db",
+        )
         success = ThumbsPipeline(
             max_retries=3,
             thumbnail_interval=60,
             thumbnail_quality=2,
-            thumbnail_dir=thumbnail_dir,
+            path_manager=path_manager,
             repository=repository,
         ).extract_thumbnails("video1", str(video_file))
 

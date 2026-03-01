@@ -13,6 +13,7 @@ from src.pipeline.single_video_orchestrator import SingleVideoOrchestrator
 from src.pipeline.thumbs_pipeline import ThumbsPipeline
 from src.pipeline.upload_pipeline import UploadPipeline
 from src.repository.stream_repository import StreamRepository
+from src.utils.path_manager import PathManager
 
 
 @pytest.fixture
@@ -35,37 +36,53 @@ def download_pipeline(repository: StreamRepository, tmp_path: Path) -> DownloadP
 
 
 @pytest.fixture
-def thumbs_pipeline(repository: StreamRepository, tmp_path: Path) -> ThumbsPipeline:
+def path_manager(tmp_path: Path) -> PathManager:
+    """テスト用パスマネージャを作成する."""
+    return PathManager(
+        download_dir=tmp_path / "downloads",
+        thumbnail_dir=tmp_path / "thumbnails",
+        database_path=tmp_path / "test.db",
+    )
+
+
+@pytest.fixture
+def thumbs_pipeline(
+    repository: StreamRepository, path_manager: PathManager
+) -> ThumbsPipeline:
     """テスト用サムネイル抽出パイプラインを作成する."""
     return ThumbsPipeline(
         max_retries=3,
         thumbnail_interval=60,
         thumbnail_quality=2,
-        thumbnail_dir=tmp_path / "thumbnails",
+        path_manager=path_manager,
         repository=repository,
     )
 
 
 @pytest.fixture
-def upload_pipeline(repository: StreamRepository, tmp_path: Path) -> UploadPipeline:
+def upload_pipeline(
+    repository: StreamRepository, path_manager: PathManager
+) -> UploadPipeline:
     """テスト用アップロードパイプラインを作成する."""
     mock_provider = Mock()
     return UploadPipeline(
         max_retries=3,
         gdrive_provider=mock_provider,
         gdrive_root_folder_id="root_folder_id",
-        thumbnail_dir=tmp_path / "thumbnails",
+        path_manager=path_manager,
         repository=repository,
     )
 
 
 @pytest.fixture
-def cleanup_pipeline(repository: StreamRepository, tmp_path: Path) -> CleanupPipeline:
+def cleanup_pipeline(
+    repository: StreamRepository, tmp_path: Path, path_manager: PathManager
+) -> CleanupPipeline:
     """テスト用クリーンアップパイプラインを作成する."""
     return CleanupPipeline(
         max_retries=3,
         download_dir=tmp_path / "downloads",
-        thumbnail_dir=tmp_path / "thumbnails",
+        path_manager=path_manager,
         repository=repository,
     )
 

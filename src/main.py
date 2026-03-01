@@ -190,20 +190,20 @@ class Main:
                 max_retries=self._settings.max_retries,
                 thumbnail_interval=self._settings.thumbnail_interval,
                 thumbnail_quality=self._settings.thumbnail_quality,
-                thumbnail_dir=self._path_manager.thumbnail_dir,
+                path_manager=self._path_manager,
                 repository=repository,
             )
             upload_pipeline = UploadPipeline(
                 max_retries=self._settings.max_retries,
                 gdrive_provider=gdrive_provider,
                 gdrive_root_folder_id=self._settings.gdrive_root_folder_id,
-                thumbnail_dir=self._path_manager.thumbnail_dir,
+                path_manager=self._path_manager,
                 repository=repository,
             )
             cleanup_pipeline = CleanupPipeline(
                 max_retries=self._settings.max_retries,
                 download_dir=self._path_manager.download_dir,
-                thumbnail_dir=self._path_manager.thumbnail_dir,
+                path_manager=self._path_manager,
                 repository=repository,
             )
 

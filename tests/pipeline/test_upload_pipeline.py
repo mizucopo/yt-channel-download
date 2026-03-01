@@ -9,6 +9,7 @@ from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
 from src.pipeline.upload_pipeline import UploadPipeline
 from src.repository.stream_repository import StreamRepository
+from src.utils.path_manager import PathManager
 
 
 @pytest.fixture
@@ -52,13 +53,18 @@ def test_upload_video_updates_status_on_success(
     mock_provider = Mock()
 
     thumbnail_dir = tmp_path / "thumbnails"
+    path_manager = PathManager(
+        download_dir=tmp_path / "downloads",
+        thumbnail_dir=thumbnail_dir,
+        database_path=tmp_path / "test.db",
+    )
 
     # Act
     success = UploadPipeline(
         max_retries=3,
         gdrive_provider=mock_provider,
         gdrive_root_folder_id="folder_id",
-        thumbnail_dir=thumbnail_dir,
+        path_manager=path_manager,
         repository=repository,
     ).upload_video("video1", str(video_path))
 
@@ -107,13 +113,18 @@ def test_upload_video_reverts_status_on_failure(
     mock_provider.upload.side_effect = Exception("Upload failed")
 
     thumbnail_dir = tmp_path / "thumbnails"
+    path_manager = PathManager(
+        download_dir=tmp_path / "downloads",
+        thumbnail_dir=thumbnail_dir,
+        database_path=tmp_path / "test.db",
+    )
 
     # Act
     success = UploadPipeline(
         max_retries=3,
         gdrive_provider=mock_provider,
         gdrive_root_folder_id="folder_id",
-        thumbnail_dir=thumbnail_dir,
+        path_manager=path_manager,
         repository=repository,
     ).upload_video("video1", str(video_path))
 
@@ -166,13 +177,18 @@ def test_upload_video_uses_correct_filename(
 
     mock_provider = Mock()
     thumbnail_dir = tmp_path / "thumbnails"
+    path_manager = PathManager(
+        download_dir=tmp_path / "downloads",
+        thumbnail_dir=thumbnail_dir,
+        database_path=tmp_path / "test.db",
+    )
 
     # Act
     success = UploadPipeline(
         max_retries=3,
         gdrive_provider=mock_provider,
         gdrive_root_folder_id="folder_id",
-        thumbnail_dir=thumbnail_dir,
+        path_manager=path_manager,
         repository=repository,
     ).upload_video("video1", str(video_path), title=title)
 

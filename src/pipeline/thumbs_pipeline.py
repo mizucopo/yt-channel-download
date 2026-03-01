@@ -5,12 +5,14 @@ ffmpegを使用して動画からスクリーンショットを抽出する。
 
 import logging
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
 from src.pipeline.base_pipeline import BasePipeline
 from src.repository.stream_repository import StreamRepository
+from src.utils.path_manager import PathManager
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ class ThumbsPipeline(BasePipeline):
         max_retries: int,
         thumbnail_interval: int,
         thumbnail_quality: int,
-        thumbnail_dir: Path,
+        path_manager: PathManager,
         repository: StreamRepository,
     ) -> None:
         """パイプラインを初期化する.
@@ -32,30 +34,17 @@ class ThumbsPipeline(BasePipeline):
             max_retries: 最大リトライ回数
             thumbnail_interval: サムネイル抽出間隔（秒）
             thumbnail_quality: サムネイル画質（1-31、小さいほど高画質）
-            thumbnail_dir: サムネイル保存ディレクトリ
+            path_manager: パスマネージャ
             repository: ストリームリポジトリ
         """
         super().__init__(max_retries, repository)
         self._thumbnail_interval = thumbnail_interval
         self._thumbnail_quality = thumbnail_quality
-        self._thumbnail_dir = thumbnail_dir
+        self._path_manager = path_manager
 
     def _get_pending_status(self) -> StreamStatus:
         """処理待ちステータスを取得する."""
         return StreamStatus.DOWNLOADED
-
-    def _get_thumbnail_dir(self, video_id: str) -> Path:
-        """サムネイル保存ディレクトリを取得する.
-
-        Args:
-            video_id: YouTube動画ID
-
-        Returns:
-            サムネイル保存先のディレクトリパス
-        """
-        thumb_dir = self._thumbnail_dir / video_id
-        thumb_dir.mkdir(parents=True, exist_ok=True)
-        return thumb_dir
 
     def _process_single(self, video_id: str, stream: Stream) -> bool:
         """単一のストリームを処理する.
@@ -89,7 +78,7 @@ class ThumbsPipeline(BasePipeline):
                 return False
 
             # サムネイルディレクトリを作成
-            thumb_dir = self._get_thumbnail_dir(video_id)
+            thumb_dir = self._path_manager.get_thumbnail_dir(video_id)
 
             logger.info(
                 "Extracting thumbnails from %s at %d second intervals",
@@ -153,9 +142,6 @@ class ThumbsPipeline(BasePipeline):
         stream = self._repository.get(video_id)
         if stream is None:
             return False
-        # local_pathを一時的に上書きするため、新しいStreamを作成
-        from dataclasses import replace
-
         stream_with_path = replace(stream, local_path=local_path)
         return self._process_single(video_id, stream_with_path)
 

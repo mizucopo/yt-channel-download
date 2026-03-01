@@ -8,6 +8,7 @@ from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
 from src.pipeline.cleanup_pipeline import CleanupPipeline
 from src.repository.stream_repository import StreamRepository
+from src.utils.path_manager import PathManager
 
 
 @pytest.fixture
@@ -54,10 +55,15 @@ def test_cleanup_video_deletes_files(
     )
 
     # Act
+    path_manager = PathManager(
+        download_dir=tmp_path / "downloads",
+        thumbnail_dir=thumbnail_dir,
+        database_path=tmp_path / "test.db",
+    )
     success = CleanupPipeline(
         max_retries=3,
         download_dir=tmp_path / "downloads",
-        thumbnail_dir=thumbnail_dir,
+        path_manager=path_manager,
         repository=repository,
     ).cleanup_video("video1", str(video_path))
 
@@ -96,10 +102,15 @@ def test_cleanup_video_handles_missing_files(
     )
 
     # Act
+    path_manager = PathManager(
+        download_dir=tmp_path / "downloads",
+        thumbnail_dir=tmp_path / "thumbnails",
+        database_path=tmp_path / "test.db",
+    )
     success = CleanupPipeline(
         max_retries=3,
         download_dir=tmp_path / "downloads",
-        thumbnail_dir=tmp_path / "thumbnails",
+        path_manager=path_manager,
         repository=repository,
     ).cleanup_video("video1", "/nonexistent/video.mp4")
 
