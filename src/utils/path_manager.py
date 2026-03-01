@@ -41,18 +41,6 @@ class PathManager:
         """データベースファイルパスを取得する."""
         return self._database_path
 
-    def get_download_path(self, video_id: str) -> Path:
-        """動画のダウンロードパスを取得する.
-
-        Args:
-            video_id: YouTube動画ID
-
-        Returns:
-            ダウンロード先のパス
-        """
-        self._download_dir.mkdir(parents=True, exist_ok=True)
-        return self._download_dir / f"{video_id}.mp4"
-
     def get_thumbnail_dir(self, video_id: str) -> Path:
         """サムネイル保存ディレクトリを取得する.
 

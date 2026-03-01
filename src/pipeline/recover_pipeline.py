@@ -7,14 +7,12 @@ import logging
 from pathlib import Path
 
 from src.constants.stream_status import StreamStatus
-from src.models.stream import Stream
-from src.pipeline.base_pipeline import BasePipeline
 from src.repository.stream_repository import StreamRepository
 
 logger = logging.getLogger(__name__)
 
 
-class RecoverPipeline(BasePipeline):
+class RecoverPipeline:
     """中断状態回復パイプライン."""
 
     def __init__(
@@ -30,26 +28,9 @@ class RecoverPipeline(BasePipeline):
             thumbnail_dir: サムネイル保存ディレクトリ
             repository: ストリームリポジトリ
         """
-        super().__init__(max_retries, repository)
+        self._max_retries = max_retries
         self._thumbnail_dir = thumbnail_dir
-
-    def _get_pending_status(self) -> StreamStatus:
-        """処理待ちステータスを取得する.
-
-        Note:
-            RecoverPipelineはprocess_next/process_allパターンを使用しないため、
-            このメソッドは使用されない。
-        """
-        return StreamStatus.DISCOVERED
-
-    def _process_single(self, _video_id: str, _stream: Stream) -> bool:
-        """単一のストリームを処理する.
-
-        Note:
-            RecoverPipelineはprocess_next/process_allパターンを使用しないため、
-            このメソッドは使用されない。
-        """
-        return False
+        self._repository = repository
 
     def run(self) -> int:
         """中断されたストリームを回復する.
