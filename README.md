@@ -1,6 +1,6 @@
 # YouTube Live Archive Downloader
 
-YouTubeライブアーカイブ（VOD）を自動的に検出・ダウンロードし、スクリーンショットを抽出してGoogle Driveへアップロード、その後ローカルファイルを削除するシステム。
+YouTubeチャンネルの動画を自動的に検出・ダウンロードし、サムネイルを抽出してGoogle Driveへアップロード、その後ローカルファイルを削除するシステム。
 
 ## 機能
 
@@ -35,8 +35,8 @@ canceled (初回検出時のスキップ状態)
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/mizucopo/yt-live-download.git
-cd yt-live-download
+git clone https://github.com/mizucopo/yt-channel-download.git
+cd yt-channel-download
 
 # 依存関係をインストール
 uv sync
@@ -78,7 +78,9 @@ cp .env.example .env
 
 ```bash
 # 全パイプラインを実行（中断されたストリームの自動復旧を含む）
-uv run python -m src.main run
+# -f/--full または -d/--days のいずれかが必須
+uv run python -m src.main run --full        # フルスキャン（全期間）
+uv run python -m src.main run --days 7      # 過去7日分をスキャン
 
 # ステータス確認
 uv run python -m src.main status
@@ -96,9 +98,11 @@ uv run python -m src.main auth
 ### オプション
 
 ```bash
-# 詳細ログを有効にする
-uv run python -m src.main -v run
+# 詳細ログを有効にする（グローバルオプション）
+uv run python -m src.main -v run --full
 ```
+
+> **初回起動時**: `--days`オプションは使用できません。必ず`--full`を指定してください。
 
 ## Docker
 
@@ -106,12 +110,12 @@ Dockerイメージを使用して実行できます。
 
 ```bash
 # イメージを取得
-docker pull mizucopo/yt-live-download
+docker pull mizucopo/yt-channel-download
 
 # ヘルプ表示
-docker run --rm mizucopo/yt-live-download --help
+docker run --rm mizucopo/yt-channel-download --help
 
-# 全パイプラインを実行
+# 全パイプラインを実行（-f/--full または -d/--days が必須）
 docker run --rm \
   -e YOUTUBE_CHANNEL_IDS="channel_id1,channel_id2" \
   -e GOOGLE_OAUTH_CLIENT_ID="your_client_id" \
@@ -119,9 +123,9 @@ docker run --rm \
   -e GOOGLE_REFRESH_TOKEN="your_refresh_token" \
   -e GDRIVE_ROOT_FOLDER_ID="your_folder_id" \
   -v ./data:/app/data \
-  mizucopo/yt-live-download run
+  mizucopo/yt-channel-download run --full
 
-# 詳細ログを有効にする
+# 過去7日分をスキャン（2回目以降）
 docker run --rm \
   -e YOUTUBE_CHANNEL_IDS="..." \
   -e GOOGLE_OAUTH_CLIENT_ID="..." \
@@ -129,7 +133,17 @@ docker run --rm \
   -e GOOGLE_REFRESH_TOKEN="..." \
   -e GDRIVE_ROOT_FOLDER_ID="..." \
   -v ./data:/app/data \
-  mizucopo/yt-live-download -v run
+  mizucopo/yt-channel-download run --days 7
+
+# 詳細ログを有効にする（-v はグローバルオプション）
+docker run --rm \
+  -e YOUTUBE_CHANNEL_IDS="..." \
+  -e GOOGLE_OAUTH_CLIENT_ID="..." \
+  -e GOOGLE_OAUTH_CLIENT_SECRET="..." \
+  -e GOOGLE_REFRESH_TOKEN="..." \
+  -e GDRIVE_ROOT_FOLDER_ID="..." \
+  -v ./data:/app/data \
+  mizucopo/yt-channel-download -v run --full
 ```
 
 ### 環境変数ファイルの使用
@@ -140,7 +154,7 @@ docker run --rm \
 docker run --rm \
   --env-file .env \
   -v ./data:/app/data \
-  mizucopo/yt-live-download run
+  mizucopo/yt-channel-download run --full
 ```
 
 ## 詳細ドキュメント

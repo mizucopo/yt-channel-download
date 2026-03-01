@@ -54,8 +54,8 @@ jobs:
           context: .
           push: true
           tags: |
-            mizucopo/yt-live-download:latest
-            mizucopo/yt-live-download:${{ steps.version.outputs.version }}
+            mizucopo/yt-channel-download:latest
+            mizucopo/yt-channel-download:${{ steps.version.outputs.version }}
 
       - name: Create and push git tag
         run: |
@@ -73,16 +73,16 @@ jobs:
           Pull the Docker image:
 
           \`\`\`bash
-          docker pull mizucopo/yt-live-download:${{ steps.version.outputs.version }}
+          docker pull mizucopo/yt-channel-download:${{ steps.version.outputs.version }}
           \`\`\`
 
           Or use the latest tag:
 
           \`\`\`bash
-          docker pull mizucopo/yt-live-download:latest
+          docker pull mizucopo/yt-channel-download:latest
           \`\`\`
 
           ## Links:
-          - [Docker Hub](https://hub.docker.com/r/mizucopo/yt-live-download)
+          - [Docker Hub](https://hub.docker.com/r/mizucopo/yt-channel-download)
           - [Source Code](${{ github.server_url }}/${{ github.repository }}/tree/${{ steps.version.outputs.version }})
           "

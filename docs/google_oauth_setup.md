@@ -75,7 +75,7 @@ GOOGLE_OAUTH_CLIENT_SECRET=your_client_secret
 docker run --rm -it \
   -e GOOGLE_OAUTH_CLIENT_ID="your_client_id" \
   -e GOOGLE_OAUTH_CLIENT_SECRET="your_client_secret" \
-  mizucopo/yt-live-download auth
+  mizucopo/yt-channel-download auth
 ```
 
 > [!NOTE]

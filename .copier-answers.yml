@@ -2,7 +2,7 @@ _commit: f5e8af0
 _src_path: git@github.com:mizucopo/repo-template.git
 author_email: mizu.copo@gmail.com
 author_name: みず
-docker_image_name: yt-live-download
+docker_image_name: yt-channel-download
 docker_registry: mizucopo
 python_version: '3.14'
 use_aws_ecr: false
