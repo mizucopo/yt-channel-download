@@ -2,6 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
@@ -66,6 +67,21 @@ class BasePipeline(ABC):
                 break
             count += 1
         return count
+
+    def _validate_file_exists(self, file_path: Path, video_id: str) -> bool:
+        """ファイルの存在を検証する.
+
+        Args:
+            file_path: 検証するファイルパス
+            video_id: 動画ID（ログ用）
+
+        Returns:
+            ファイルが存在する場合はTrue
+        """
+        if not file_path.exists():
+            logger.warning("File not found for %s: %s", video_id, file_path)
+            return False
+        return True
 
     @staticmethod
     def truncate_error(message: str | None, max_length: int = 500) -> str:

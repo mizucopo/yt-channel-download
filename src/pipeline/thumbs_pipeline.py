@@ -83,6 +83,11 @@ class ThumbsPipeline(BasePipeline):
             return False
 
         try:
+            # 動画ファイルの存在確認
+            video_file = Path(stream.local_path)
+            if not self._validate_file_exists(video_file, video_id):
+                return False
+
             # サムネイルディレクトリを作成
             thumb_dir = self._get_thumbnail_dir(video_id)
 
@@ -96,7 +101,7 @@ class ThumbsPipeline(BasePipeline):
                 [
                     "ffmpeg",
                     "-i",
-                    stream.local_path,
+                    str(video_file),
                     "-vf",
                     f"fps=1/{self._thumbnail_interval}",
                     "-q:v",

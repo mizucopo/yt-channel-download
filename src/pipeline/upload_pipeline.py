@@ -82,8 +82,8 @@ class UploadPipeline(BasePipeline):
         try:
             # 動画ファイルをアップロード
             video_file = Path(stream.local_path)
-            if not video_file.exists():
-                raise FileNotFoundError(f"Video file not found: {stream.local_path}")
+            if not self._validate_file_exists(video_file, video_id):
+                return False
 
             folder_name = GoogleDriveProvider.sanitize_name(stream.title or video_id)
             gdrive_filename = (

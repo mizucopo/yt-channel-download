@@ -27,6 +27,7 @@ def test_extract_thumbnails_updates_status_on_success(
 
     Arrange:
         downloadedステータスのストリームを登録する。
+        動画ファイルのダミーファイルを作成する。
         subprocess.runをモックして成功を返す。
 
     Act:
@@ -36,12 +37,15 @@ def test_extract_thumbnails_updates_status_on_success(
         ステータスがthumbs_doneに更新されていること。
     """
     # Arrange
+    video_file = tmp_path / "video.mp4"
+    video_file.touch()
+
     repository.insert(
         Stream(
             video_id="video1",
             status=StreamStatus.DOWNLOADED,
             title="Test Video",
-            local_path="/path/to/video.mp4",
+            local_path=str(video_file),
         )
     )
 
@@ -59,7 +63,7 @@ def test_extract_thumbnails_updates_status_on_success(
             thumbnail_quality=2,
             thumbnail_dir=thumbnail_dir,
             repository=repository,
-        ).extract_thumbnails("video1", "/path/to/video.mp4")
+        ).extract_thumbnails("video1", str(video_file))
 
     # Assert
     assert success is True
@@ -75,6 +79,7 @@ def test_extract_thumbnails_reverts_status_on_failure(
 
     Arrange:
         downloadedステータスのストリームを登録する。
+        動画ファイルのダミーファイルを作成する。
         subprocess.runをモックして失敗を返す。
 
     Act:
@@ -84,12 +89,15 @@ def test_extract_thumbnails_reverts_status_on_failure(
         ステータスがdownloadedに戻っていること。
     """
     # Arrange
+    video_file = tmp_path / "video.mp4"
+    video_file.touch()
+
     repository.insert(
         Stream(
             video_id="video1",
             status=StreamStatus.DOWNLOADED,
             title="Test Video",
-            local_path="/path/to/video.mp4",
+            local_path=str(video_file),
         )
     )
 
@@ -107,7 +115,7 @@ def test_extract_thumbnails_reverts_status_on_failure(
             thumbnail_quality=2,
             thumbnail_dir=thumbnail_dir,
             repository=repository,
-        ).extract_thumbnails("video1", "/path/to/video.mp4")
+        ).extract_thumbnails("video1", str(video_file))
 
     # Assert
     assert success is False
