@@ -110,11 +110,3 @@ class CleanupPipeline(BasePipeline):
             クリーンアップ対象があった場合はTrue
         """
         return self.process_next()
-
-    def cleanup_all(self) -> int:
-        """すべての待機中の動画をクリーンアップする.
-
-        Returns:
-            クリーンアップに成功した動画数
-        """
-        return self.process_all()

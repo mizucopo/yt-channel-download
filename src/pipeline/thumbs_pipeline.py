@@ -152,11 +152,3 @@ class ThumbsPipeline(BasePipeline):
             抽出対象があった場合はTrue
         """
         return self.process_next()
-
-    def extract_all(self) -> int:
-        """すべての待機中の動画からサムネイルを抽出する.
-
-        Returns:
-            抽出に成功した動画数
-        """
-        return self.process_all()

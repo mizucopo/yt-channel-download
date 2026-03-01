@@ -149,11 +149,3 @@ class UploadPipeline(BasePipeline):
             アップロード対象があった場合はTrue
         """
         return self.process_next()
-
-    def upload_all(self) -> int:
-        """すべての待機中の動画をアップロードする.
-
-        Returns:
-            アップロードに成功した動画数
-        """
-        return self.process_all()

@@ -131,19 +131,3 @@ class DownloadPipeline(BasePipeline):
         if stream is None:
             return False
         return self._process_single(video_id, stream)
-
-    def download_next(self) -> bool:
-        """次の待機中の動画をダウンロードする.
-
-        Returns:
-            ダウンロード対象があった場合はTrue
-        """
-        return self.process_next()
-
-    def download_all(self) -> int:
-        """すべての待機中の動画をダウンロードする.
-
-        Returns:
-            ダウンロードに成功した動画数
-        """
-        return self.process_all()
