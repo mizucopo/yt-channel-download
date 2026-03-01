@@ -22,6 +22,7 @@ class DiscordNotifier:
         """
         self._webhook_url = webhook_url
         self._gdrive_folder_url = gdrive_folder_url
+        self._client = DiscordClient(webhook_url=webhook_url) if webhook_url else None
 
     def notify_upload_complete(self, title: str | None, video_id: str) -> None:
         """アップロード完了通知を送信する.
@@ -32,7 +33,7 @@ class DiscordNotifier:
             title: YouTube動画タイトル
             video_id: YouTube動画ID
         """
-        if not self._webhook_url:
+        if not self._client:
             return
 
         display_title = title or video_id
@@ -44,8 +45,7 @@ class DiscordNotifier:
         )
 
         try:
-            client = DiscordClient(webhook_url=self._webhook_url)
-            client.send_embed(embed=embed)
+            self._client.send_embed(embed=embed)
             logger.info("Discord notification sent: %s", video_id)
         except DiscordWebhookError as e:
             logger.warning("Discord notification failed for %s: %s", video_id, e)

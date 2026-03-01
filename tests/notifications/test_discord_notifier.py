@@ -12,14 +12,14 @@ MODULE_PATH = "src.notifications.discord_notifier.DiscordClient"
 def test_notify_upload_complete_skips_notification_when_webhook_url_is_none() -> None:
     """Webhook URLが未設定の場合、通知が送信されないこと。"""
     # Arrange
-    notifier = DiscordNotifier(
-        webhook_url=None,
-        gdrive_folder_url="https://example.com",
-    )
+    with patch(MODULE_PATH) as mock_client:
+        notifier = DiscordNotifier(
+            webhook_url=None,
+            gdrive_folder_url="https://example.com",
+        )
 
     # Act
-    with patch(MODULE_PATH) as mock_client:
-        notifier.notify_upload_complete(title="Test Video", video_id="abc123")
+    notifier.notify_upload_complete(title="Test Video", video_id="abc123")
 
     # Assert
     mock_client.assert_not_called()
@@ -28,15 +28,16 @@ def test_notify_upload_complete_skips_notification_when_webhook_url_is_none() ->
 def test_notify_upload_complete_sends_embed_when_webhook_url_is_set() -> None:
     """Webhook URLが設定されている場合、正しいEmbedが送信されること。"""
     # Arrange
-    notifier = DiscordNotifier(
-        webhook_url="https://discord.com/api/webhooks/xxx/yyy",
-        gdrive_folder_url="https://drive.google.com/drive/folders/zzz",
-    )
-
-    # Act
     with patch(MODULE_PATH) as mock_client_class:
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
+
+        notifier = DiscordNotifier(
+            webhook_url="https://discord.com/api/webhooks/xxx/yyy",
+            gdrive_folder_url="https://drive.google.com/drive/folders/zzz",
+        )
+
+        # Act
         notifier.notify_upload_complete(
             title="Test Video Title",
             video_id="abc123",
@@ -59,18 +60,17 @@ def test_notify_upload_complete_sends_embed_when_webhook_url_is_set() -> None:
 def test_notify_upload_complete_handles_error_gracefully() -> None:
     """Discord送信エラー時はログが出力され、例外が発生しないこと。"""
     # Arrange
-    notifier = DiscordNotifier(
-        webhook_url="https://discord.com/api/webhooks/xxx/yyy",
-        gdrive_folder_url="https://drive.google.com/drive/folders/zzz",
-    )
-
-    # Act
     with patch(MODULE_PATH) as mock_client_class:
         mock_client = MagicMock()
         mock_client.send_embed.side_effect = DiscordWebhookError("Connection error")
         mock_client_class.return_value = mock_client
 
-        # 例外が発生しないことを確認
+        notifier = DiscordNotifier(
+            webhook_url="https://discord.com/api/webhooks/xxx/yyy",
+            gdrive_folder_url="https://drive.google.com/drive/folders/zzz",
+        )
+
+        # Act - 例外が発生しないことを確認
         notifier.notify_upload_complete(title="Test Video", video_id="abc123")
 
     # Assert - 例外が発生せず正常に終了すること
