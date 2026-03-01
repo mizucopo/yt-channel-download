@@ -5,7 +5,6 @@
 
 import logging
 import shutil
-from dataclasses import replace
 from pathlib import Path
 
 from src.constants.stream_status import StreamStatus
@@ -86,22 +85,6 @@ class CleanupPipeline(BasePipeline):
             logger.exception("Cleanup error for %s", video_id)
             # クリーンアップエラーはリトライしない（状態はuploadedのまま）
             return False
-
-    def cleanup_video(self, video_id: str, local_path: str) -> bool:
-        """動画とサムネイルをローカルから削除する.
-
-        Args:
-            video_id: YouTube動画ID
-            local_path: 動画ファイルのパス
-
-        Returns:
-            クリーンアップが成功した場合はTrue
-        """
-        stream = self._repository.get(video_id)
-        if stream is None:
-            return False
-        stream_with_path = replace(stream, local_path=local_path)
-        return self._process_single(video_id, stream_with_path)
 
     def cleanup_next(self) -> bool:
         """次の待機中の動画をクリーンアップする.

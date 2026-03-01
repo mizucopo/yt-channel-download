@@ -5,7 +5,6 @@ ffmpegを使用して動画からスクリーンショットを抽出する。
 
 import logging
 import subprocess
-from dataclasses import replace
 from pathlib import Path
 
 from src.constants.stream_status import StreamStatus
@@ -134,22 +133,6 @@ class ThumbsPipeline(BasePipeline):
                 increment_retry=True,
             )
             return False
-
-    def extract_thumbnails(self, video_id: str, local_path: str) -> bool:
-        """動画からサムネイルを抽出する.
-
-        Args:
-            video_id: YouTube動画ID
-            local_path: 動画ファイルのパス
-
-        Returns:
-            抽出が成功した場合はTrue
-        """
-        stream = self._repository.get(video_id)
-        if stream is None:
-            return False
-        stream_with_path = replace(stream, local_path=local_path)
-        return self._process_single(video_id, stream_with_path)
 
     def extract_next(self) -> bool:
         """次の待機中の動画からサムネイルを抽出する.
