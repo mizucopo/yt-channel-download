@@ -54,18 +54,6 @@ class PathManager:
         thumb_dir.mkdir(parents=True, exist_ok=True)
         return thumb_dir
 
-    def get_thumbnail_path(self, video_id: str, index: int) -> Path:
-        """サムネイルファイルのパスを取得する.
-
-        Args:
-            video_id: YouTube動画ID
-            index: サムネイルのインデックス
-
-        Returns:
-            サムネイルファイルのパス
-        """
-        return self.get_thumbnail_dir(video_id) / f"thumb_{index:08d}.jpg"
-
     def ensure_directories(self) -> None:
         """必要なディレクトリを作成する."""
         self._download_dir.mkdir(parents=True, exist_ok=True)

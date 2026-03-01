@@ -23,11 +23,3 @@ class ScanMode:
         if self.days is None:
             return None
         return datetime.now(timezone.utc) - timedelta(days=self.days)
-
-    def is_full_scan(self) -> bool:
-        """フルスキャンかどうかを判定する.
-
-        Returns:
-            フルスキャンの場合はTrue
-        """
-        return self.days is None

@@ -2,38 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 from src.models.scan_mode import ScanMode
-
-
-@pytest.mark.parametrize(
-    "days,expected",
-    [
-        pytest.param(None, True, id="full_scan"),
-        pytest.param(7, False, id="partial_scan"),
-    ],
-)
-def test_is_full_scan_returns_correct_value(days: int | None, expected: bool) -> None:
-    """is_full_scan()がdaysの値に応じて正しい値を返すこと.
-
-    Arrange:
-        days=Noneまたはdays=7でScanModeを作成する。
-
-    Act:
-        is_full_scan()を呼び出す。
-
-    Assert:
-        days=Noneの場合はTrue、daysが指定された場合はFalseが返されること。
-    """
-    # Arrange
-    scan_mode = ScanMode(days=days)
-
-    # Act
-    result = scan_mode.is_full_scan()
-
-    # Assert
-    assert result is expected
 
 
 def test_get_published_after_returns_none_when_days_is_none() -> None:
