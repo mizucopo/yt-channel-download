@@ -9,12 +9,14 @@ from pathlib import Path
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
 from src.constants.stream_status import StreamStatus
+from src.models.stream import Stream
+from src.pipeline.base_pipeline import BasePipeline
 from src.repository.stream_repository import StreamRepository
 
 logger = logging.getLogger(__name__)
 
 
-class UploadPipeline:
+class UploadPipeline(BasePipeline):
     """Google Driveアップロードパイプライン."""
 
     def __init__(
@@ -34,11 +36,14 @@ class UploadPipeline:
             thumbnail_dir: サムネイルディレクトリ
             repository: ストリームリポジトリ
         """
-        self._max_retries = max_retries
+        super().__init__(max_retries, repository)
         self._gdrive_provider = gdrive_provider
         self._gdrive_root_folder_id = gdrive_root_folder_id
         self._thumbnail_dir = thumbnail_dir
-        self._repository = repository
+
+    def _get_pending_status(self) -> StreamStatus:
+        """処理待ちステータスを取得する."""
+        return StreamStatus.THUMBS_DONE
 
     def _get_thumbnail_dir(self, video_id: str) -> Path:
         """サムネイル保存ディレクトリを取得する.
@@ -51,19 +56,19 @@ class UploadPipeline:
         """
         return self._thumbnail_dir / video_id
 
-    def upload_video(
-        self, video_id: str, local_path: str, title: str | None = None
-    ) -> bool:
-        """動画とサムネイルをGoogle Driveにアップロードする.
+    def _process_single(self, video_id: str, stream: Stream) -> bool:
+        """単一のストリームを処理する.
 
         Args:
             video_id: YouTube動画ID
-            local_path: 動画ファイルのパス
-            title: YouTube動画タイトル（ファイル名に使用）
+            stream: ストリーム情報
 
         Returns:
-            アップロードが成功した場合はTrue
+            処理が成功した場合はTrue
         """
+        if stream.local_path is None:
+            return False
+
         # CAS更新: thumbs_done -> uploading
         updated = self._repository.update_status(
             video_id,
@@ -76,14 +81,14 @@ class UploadPipeline:
 
         try:
             # 動画ファイルをアップロード
-            video_file = Path(local_path)
+            video_file = Path(stream.local_path)
             if not video_file.exists():
-                raise FileNotFoundError(f"Video file not found: {local_path}")
+                raise FileNotFoundError(f"Video file not found: {stream.local_path}")
 
-            folder_name = GoogleDriveProvider.sanitize_name(title or video_id)
+            folder_name = GoogleDriveProvider.sanitize_name(stream.title or video_id)
             gdrive_filename = (
-                f"{GoogleDriveProvider.sanitize_name(title)}{video_file.suffix}"
-                if title
+                f"{GoogleDriveProvider.sanitize_name(stream.title)}{video_file.suffix}"
+                if stream.title
                 else video_file.name
             )
 
@@ -122,10 +127,32 @@ class UploadPipeline:
                 video_id,
                 StreamStatus.THUMBS_DONE,
                 expected_old_status=StreamStatus.UPLOADING,
-                error_message=str(e)[:500],
+                error_message=self.truncate_error(str(e)),
                 increment_retry=True,
             )
             return False
+
+    def upload_video(
+        self, video_id: str, local_path: str, title: str | None = None
+    ) -> bool:
+        """動画とサムネイルをGoogle Driveにアップロードする.
+
+        Args:
+            video_id: YouTube動画ID
+            local_path: 動画ファイルのパス
+            title: YouTube動画タイトル（ファイル名に使用）
+
+        Returns:
+            アップロードが成功した場合はTrue
+        """
+        stream = self._repository.get(video_id)
+        if stream is None:
+            return False
+        # local_pathとtitleを一時的に上書きするため、新しいStreamを作成
+        from dataclasses import replace
+
+        stream_with_overrides = replace(stream, local_path=local_path, title=title)
+        return self._process_single(video_id, stream_with_overrides)
 
     def upload_next(self) -> bool:
         """次の待機中の動画をアップロードする.
@@ -133,17 +160,7 @@ class UploadPipeline:
         Returns:
             アップロード対象があった場合はTrue
         """
-        stream = self._repository.get_next_pending(
-            StreamStatus.THUMBS_DONE, self._max_retries
-        )
-        if stream is None or stream.local_path is None:
-            return False
-
-        return self.upload_video(
-            video_id=stream.video_id,
-            local_path=stream.local_path,
-            title=stream.title,
-        )
+        return self.process_next()
 
     def upload_all(self) -> int:
         """すべての待機中の動画をアップロードする.
@@ -151,9 +168,4 @@ class UploadPipeline:
         Returns:
             アップロードに成功した動画数
         """
-        count = 0
-        while True:
-            if not self.upload_next():
-                break
-            count += 1
-        return count
+        return self.process_all()

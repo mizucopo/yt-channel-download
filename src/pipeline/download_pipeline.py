@@ -8,12 +8,14 @@ import subprocess
 from pathlib import Path
 
 from src.constants.stream_status import StreamStatus
+from src.models.stream import Stream
+from src.pipeline.base_pipeline import BasePipeline
 from src.repository.stream_repository import StreamRepository
 
 logger = logging.getLogger(__name__)
 
 
-class DownloadPipeline:
+class DownloadPipeline(BasePipeline):
     """動画ダウンロードパイプライン."""
 
     DEFAULT_VIDEO_FORMAT = "bv[height=1080][ext=webm]+ba[ext=webm]"
@@ -31,18 +33,22 @@ class DownloadPipeline:
             download_dir: ダウンロード保存ディレクトリ
             repository: ストリームリポジトリ
         """
-        self._max_retries = max_retries
+        super().__init__(max_retries, repository)
         self._download_dir = download_dir
-        self._repository = repository
 
-    def download_video(self, video_id: str) -> bool:
-        """指定された動画をダウンロードする.
+    def _get_pending_status(self) -> StreamStatus:
+        """処理待ちステータスを取得する."""
+        return StreamStatus.DISCOVERED
+
+    def _process_single(self, video_id: str, _stream: Stream) -> bool:
+        """単一のストリームを処理する.
 
         Args:
             video_id: YouTube動画ID
+            _stream: ストリーム情報（未使用）
 
         Returns:
-            ダウンロードが成功した場合はTrue
+            処理が成功した場合はTrue
         """
         # CAS更新: discovered -> downloading
         updated = self._repository.update_status(
@@ -83,9 +89,7 @@ class DownloadPipeline:
                     video_id,
                     StreamStatus.DISCOVERED,
                     expected_old_status=StreamStatus.DOWNLOADING,
-                    error_message=(
-                        result.stderr[:500] if result.stderr else "Unknown error"
-                    ),
+                    error_message=self.truncate_error(result.stderr),
                     increment_retry=True,
                 )
                 return False
@@ -109,10 +113,24 @@ class DownloadPipeline:
                 video_id,
                 StreamStatus.DISCOVERED,
                 expected_old_status=StreamStatus.DOWNLOADING,
-                error_message=str(e)[:500],
+                error_message=self.truncate_error(str(e)),
                 increment_retry=True,
             )
             return False
+
+    def download_video(self, video_id: str) -> bool:
+        """指定された動画をダウンロードする.
+
+        Args:
+            video_id: YouTube動画ID
+
+        Returns:
+            ダウンロードが成功した場合はTrue
+        """
+        stream = self._repository.get(video_id)
+        if stream is None:
+            return False
+        return self._process_single(video_id, stream)
 
     def download_next(self) -> bool:
         """次の待機中の動画をダウンロードする.
@@ -120,13 +138,7 @@ class DownloadPipeline:
         Returns:
             ダウンロード対象があった場合はTrue
         """
-        stream = self._repository.get_next_pending(
-            StreamStatus.DISCOVERED, self._max_retries
-        )
-        if stream is None:
-            return False
-
-        return self.download_video(stream.video_id)
+        return self.process_next()
 
     def download_all(self) -> int:
         """すべての待機中の動画をダウンロードする.
@@ -134,9 +146,4 @@ class DownloadPipeline:
         Returns:
             ダウンロードに成功した動画数
         """
-        count = 0
-        while True:
-            if not self.download_next():
-                break
-            count += 1
-        return count
+        return self.process_all()

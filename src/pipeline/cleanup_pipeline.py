@@ -8,12 +8,14 @@ import shutil
 from pathlib import Path
 
 from src.constants.stream_status import StreamStatus
+from src.models.stream import Stream
+from src.pipeline.base_pipeline import BasePipeline
 from src.repository.stream_repository import StreamRepository
 
 logger = logging.getLogger(__name__)
 
 
-class CleanupPipeline:
+class CleanupPipeline(BasePipeline):
     """ローカルファイルクリーンアップパイプライン."""
 
     def __init__(
@@ -31,10 +33,13 @@ class CleanupPipeline:
             thumbnail_dir: サムネイルディレクトリ
             repository: ストリームリポジトリ
         """
-        self._max_retries = max_retries
+        super().__init__(max_retries, repository)
         self._download_dir = download_dir
         self._thumbnail_dir = thumbnail_dir
-        self._repository = repository
+
+    def _get_pending_status(self) -> StreamStatus:
+        """処理待ちステータスを取得する."""
+        return StreamStatus.UPLOADED
 
     def _get_thumbnail_dir(self, video_id: str) -> Path:
         """サムネイル保存ディレクトリを取得する.
@@ -47,16 +52,19 @@ class CleanupPipeline:
         """
         return self._thumbnail_dir / video_id
 
-    def cleanup_video(self, video_id: str, local_path: str) -> bool:
-        """動画とサムネイルをローカルから削除する.
+    def _process_single(self, video_id: str, stream: Stream) -> bool:
+        """単一のストリームを処理する.
 
         Args:
             video_id: YouTube動画ID
-            local_path: 動画ファイルのパス
+            stream: ストリーム情報
 
         Returns:
-            クリーンアップが成功した場合はTrue
+            処理が成功した場合はTrue
         """
+        if stream.local_path is None:
+            return False
+
         # CAS更新: uploaded -> cleaned
         updated = self._repository.update_status(
             video_id,
@@ -69,10 +77,10 @@ class CleanupPipeline:
 
         try:
             # 動画ファイルを削除
-            video_file = Path(local_path)
+            video_file = Path(stream.local_path)
             if video_file.exists():
                 video_file.unlink()
-                logger.info("Deleted video file: %s", local_path)
+                logger.info("Deleted video file: %s", stream.local_path)
 
             # サムネイルディレクトリを削除
             thumb_dir = self._get_thumbnail_dir(video_id)
@@ -88,19 +96,32 @@ class CleanupPipeline:
             # クリーンアップエラーはリトライしない（状態はuploadedのまま）
             return False
 
+    def cleanup_video(self, video_id: str, local_path: str) -> bool:
+        """動画とサムネイルをローカルから削除する.
+
+        Args:
+            video_id: YouTube動画ID
+            local_path: 動画ファイルのパス
+
+        Returns:
+            クリーンアップが成功した場合はTrue
+        """
+        stream = self._repository.get(video_id)
+        if stream is None:
+            return False
+        # local_pathを一時的に上書きするため、新しいStreamを作成
+        from dataclasses import replace
+
+        stream_with_path = replace(stream, local_path=local_path)
+        return self._process_single(video_id, stream_with_path)
+
     def cleanup_next(self) -> bool:
         """次の待機中の動画をクリーンアップする.
 
         Returns:
             クリーンアップ対象があった場合はTrue
         """
-        stream = self._repository.get_next_pending(
-            StreamStatus.UPLOADED, self._max_retries
-        )
-        if stream is None or stream.local_path is None:
-            return False
-
-        return self.cleanup_video(stream.video_id, stream.local_path)
+        return self.process_next()
 
     def cleanup_all(self) -> int:
         """すべての待機中の動画をクリーンアップする.
@@ -108,9 +129,4 @@ class CleanupPipeline:
         Returns:
             クリーンアップに成功した動画数
         """
-        count = 0
-        while True:
-            if not self.cleanup_next():
-                break
-            count += 1
-        return count
+        return self.process_all()

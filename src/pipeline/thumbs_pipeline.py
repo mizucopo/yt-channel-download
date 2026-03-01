@@ -8,12 +8,14 @@ import subprocess
 from pathlib import Path
 
 from src.constants.stream_status import StreamStatus
+from src.models.stream import Stream
+from src.pipeline.base_pipeline import BasePipeline
 from src.repository.stream_repository import StreamRepository
 
 logger = logging.getLogger(__name__)
 
 
-class ThumbsPipeline:
+class ThumbsPipeline(BasePipeline):
     """サムネイル抽出パイプライン."""
 
     def __init__(
@@ -33,11 +35,14 @@ class ThumbsPipeline:
             thumbnail_dir: サムネイル保存ディレクトリ
             repository: ストリームリポジトリ
         """
-        self._max_retries = max_retries
+        super().__init__(max_retries, repository)
         self._thumbnail_interval = thumbnail_interval
         self._thumbnail_quality = thumbnail_quality
         self._thumbnail_dir = thumbnail_dir
-        self._repository = repository
+
+    def _get_pending_status(self) -> StreamStatus:
+        """処理待ちステータスを取得する."""
+        return StreamStatus.DOWNLOADED
 
     def _get_thumbnail_dir(self, video_id: str) -> Path:
         """サムネイル保存ディレクトリを取得する.
@@ -52,16 +57,19 @@ class ThumbsPipeline:
         thumb_dir.mkdir(parents=True, exist_ok=True)
         return thumb_dir
 
-    def extract_thumbnails(self, video_id: str, local_path: str) -> bool:
-        """動画からサムネイルを抽出する.
+    def _process_single(self, video_id: str, stream: Stream) -> bool:
+        """単一のストリームを処理する.
 
         Args:
             video_id: YouTube動画ID
-            local_path: 動画ファイルのパス
+            stream: ストリーム情報
 
         Returns:
-            抽出が成功した場合はTrue
+            処理が成功した場合はTrue
         """
+        if stream.local_path is None:
+            return False
+
         # CAS更新: downloaded -> thumbs_done
         updated = self._repository.update_status(
             video_id,
@@ -88,7 +96,7 @@ class ThumbsPipeline:
                 [
                     "ffmpeg",
                     "-i",
-                    local_path,
+                    stream.local_path,
                     "-vf",
                     f"fps=1/{self._thumbnail_interval}",
                     "-q:v",
@@ -108,9 +116,7 @@ class ThumbsPipeline:
                     video_id,
                     StreamStatus.DOWNLOADED,
                     expected_old_status=StreamStatus.THUMBS_DONE,
-                    error_message=(
-                        result.stderr[:500] if result.stderr else "Unknown error"
-                    ),
+                    error_message=self.truncate_error(result.stderr),
                     increment_retry=True,
                 )
                 return False
@@ -124,10 +130,29 @@ class ThumbsPipeline:
                 video_id,
                 StreamStatus.DOWNLOADED,
                 expected_old_status=StreamStatus.THUMBS_DONE,
-                error_message=str(e)[:500],
+                error_message=self.truncate_error(str(e)),
                 increment_retry=True,
             )
             return False
+
+    def extract_thumbnails(self, video_id: str, local_path: str) -> bool:
+        """動画からサムネイルを抽出する.
+
+        Args:
+            video_id: YouTube動画ID
+            local_path: 動画ファイルのパス
+
+        Returns:
+            抽出が成功した場合はTrue
+        """
+        stream = self._repository.get(video_id)
+        if stream is None:
+            return False
+        # local_pathを一時的に上書きするため、新しいStreamを作成
+        from dataclasses import replace
+
+        stream_with_path = replace(stream, local_path=local_path)
+        return self._process_single(video_id, stream_with_path)
 
     def extract_next(self) -> bool:
         """次の待機中の動画からサムネイルを抽出する.
@@ -135,13 +160,7 @@ class ThumbsPipeline:
         Returns:
             抽出対象があった場合はTrue
         """
-        stream = self._repository.get_next_pending(
-            StreamStatus.DOWNLOADED, self._max_retries
-        )
-        if stream is None or stream.local_path is None:
-            return False
-
-        return self.extract_thumbnails(stream.video_id, stream.local_path)
+        return self.process_next()
 
     def extract_all(self) -> int:
         """すべての待機中の動画からサムネイルを抽出する.
@@ -149,9 +168,4 @@ class ThumbsPipeline:
         Returns:
             抽出に成功した動画数
         """
-        count = 0
-        while True:
-            if not self.extract_next():
-                break
-            count += 1
-        return count
+        return self.process_all()
