@@ -4,9 +4,10 @@ SQLiteを使用してストリーム情報を管理する。
 """
 
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 
 from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
@@ -23,24 +24,27 @@ class StreamRepository:
         """
         self._database_path = database_path
 
-    def _get_connection(self) -> sqlite3.Connection:
-        """データベース接続を取得する.
+    @contextmanager
+    def _connection(self) -> Generator[sqlite3.Connection, None, None]:
+        """データベース接続のコンテキストマネージャ.
 
-        Returns:
+        Yields:
             SQLite接続オブジェクト
         """
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(str(self._database_path))
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def init_db(self) -> None:
         """データベースを初期化する.
 
         streamsテーブルが存在しない場合は作成する。
         """
-        conn = self._get_connection()
-        try:
+        with self._connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS streams (
                     video_id TEXT PRIMARY KEY,
@@ -57,8 +61,6 @@ class StreamRepository:
                 )
             """)
             conn.commit()
-        finally:
-            conn.close()
 
     @staticmethod
     def _row_to_stream(row: sqlite3.Row) -> Stream:
@@ -90,8 +92,7 @@ class StreamRepository:
         Args:
             stream: 登録するストリーム情報
         """
-        conn = self._get_connection()
-        try:
+        with self._connection() as conn:
             now = datetime.now().isoformat()
             conn.execute(
                 """
@@ -110,8 +111,6 @@ class StreamRepository:
                 ),
             )
             conn.commit()
-        finally:
-            conn.close()
 
     def get(self, video_id: str) -> Stream | None:
         """指定されたvideo_idのストリームを取得する.
@@ -122,8 +121,7 @@ class StreamRepository:
         Returns:
             ストリーム情報（存在しない場合はNone）
         """
-        conn = self._get_connection()
-        try:
+        with self._connection() as conn:
             cursor = conn.execute(
                 "SELECT * FROM streams WHERE video_id = ?",
                 (video_id,),
@@ -132,8 +130,6 @@ class StreamRepository:
             if row is None:
                 return None
             return self._row_to_stream(row)
-        finally:
-            conn.close()
 
     def get_by_status(self, status: StreamStatus) -> list[Stream]:
         """指定されたステータスのストリーム一覧を取得する.
@@ -144,16 +140,13 @@ class StreamRepository:
         Returns:
             ストリームのリスト
         """
-        conn = self._get_connection()
-        try:
+        with self._connection() as conn:
             cursor = conn.execute(
                 "SELECT * FROM streams WHERE status = ? ORDER BY published_at DESC",
                 (status.value,),
             )
             rows = cursor.fetchall()
             return [self._row_to_stream(row) for row in rows]
-        finally:
-            conn.close()
 
     def update_status(
         self,
@@ -182,8 +175,7 @@ class StreamRepository:
         Returns:
             更新が成功した場合はTrue、失敗した場合はFalse
         """
-        conn = self._get_connection()
-        try:
+        with self._connection() as conn:
             now = datetime.now().isoformat()
 
             # 動的SQLを構築
@@ -220,8 +212,6 @@ class StreamRepository:
             cursor = conn.execute(sql, params)
             conn.commit()
             return cursor.rowcount > 0
-        finally:
-            conn.close()
 
     def get_next_pending(self, status: StreamStatus, max_retries: int) -> Stream | None:
         """次の処理対象を取得する.
@@ -235,8 +225,7 @@ class StreamRepository:
         Returns:
             次の処理対象（存在しない場合はNone）
         """
-        conn = self._get_connection()
-        try:
+        with self._connection() as conn:
             cursor = conn.execute(
                 """
                 SELECT * FROM streams
@@ -250,8 +239,6 @@ class StreamRepository:
             if row is None:
                 return None
             return self._row_to_stream(row)
-        finally:
-            conn.close()
 
     def is_empty(self) -> bool:
         """ストリームテーブルが空かどうかを判定する.
@@ -259,13 +246,10 @@ class StreamRepository:
         Returns:
             テーブルが空の場合はTrue、レコードが存在する場合はFalse
         """
-        conn = self._get_connection()
-        try:
+        with self._connection() as conn:
             cursor = conn.execute("SELECT COUNT(*) FROM streams")
             count = cursor.fetchone()[0]
             return int(count) == 0
-        finally:
-            conn.close()
 
     def reset_for_redownload(self, video_id: str) -> bool:
         """再ダウンロード用にストリームをリセットする.
@@ -276,8 +260,7 @@ class StreamRepository:
         Returns:
             リセットが成功した場合はTrue
         """
-        conn = self._get_connection()
-        try:
+        with self._connection() as conn:
             now = datetime.now().isoformat()
             cursor = conn.execute(
                 """
@@ -293,8 +276,6 @@ class StreamRepository:
             )
             conn.commit()
             return cursor.rowcount > 0
-        finally:
-            conn.close()
 
     def reset_all_retry_counts(self) -> int:
         """すべてのストリームのretry_countを0にリセットする.
@@ -302,10 +283,7 @@ class StreamRepository:
         Returns:
             更新された行数
         """
-        conn = self._get_connection()
-        try:
+        with self._connection() as conn:
             cursor = conn.execute("UPDATE streams SET retry_count = 0")
             conn.commit()
             return cursor.rowcount
-        finally:
-            conn.close()
