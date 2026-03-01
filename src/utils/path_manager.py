@@ -76,7 +76,7 @@ class PathManager:
         Returns:
             サムネイルファイルのパス
         """
-        return self.get_thumbnail_dir(video_id) / f"thumb_{index:04d}.jpg"
+        return self.get_thumbnail_dir(video_id) / f"thumb_{index:08d}.jpg"
 
     def ensure_directories(self) -> None:
         """必要なディレクトリを作成する."""

@@ -63,19 +63,28 @@ def test_discover_all_skips_existing_videos(repository: StreamRepository) -> Non
     assert count == 0
 
 
-def test_discover_all_registers_as_canceled_on_first_run(
+@pytest.mark.parametrize(
+    "is_first_run,expected_status",
+    [
+        pytest.param(True, StreamStatus.CANCELED, id="first_run"),
+        pytest.param(False, StreamStatus.DISCOVERED, id="normal_run"),
+    ],
+)
+def test_discover_all_registers_with_correct_initial_status(
     repository: StreamRepository,
+    is_first_run: bool,
+    expected_status: StreamStatus,
 ) -> None:
-    """初回起動時に動画がCANCELEDで登録されること.
+    """discover_allがis_first_runに応じて正しい初期ステータスで登録すること.
 
     Arrange:
         YouTube APIクライアントのモックを準備する。
 
     Act:
-        is_first_run=Trueでdiscover_all()を呼び出す。
+        is_first_runを指定してdiscover_all()を呼び出す。
 
     Assert:
-        動画がCANCELEDステータスで登録されること。
+        初回実行時はCANCELED、通常実行時はDISCOVEREDで登録されること。
     """
     # Arrange
     mock_client = Mock()
@@ -93,67 +102,34 @@ def test_discover_all_registers_as_canceled_on_first_run(
         client=mock_client,
         channel_ids=["channel1"],
         repository=repository,
-        is_first_run=True,
+        is_first_run=is_first_run,
     ).discover_all()
 
     # Assert
     assert count == 1
     result = repository.get("video1")
     assert result is not None
-    assert result.status == StreamStatus.CANCELED
+    assert result.status == expected_status
 
 
-def test_discover_all_registers_as_discovered_on_normal_run(
-    repository: StreamRepository,
-) -> None:
-    """通常実行時に動画がDISCOVEREDで登録されること.
-
-    Arrange:
-        YouTube APIクライアントのモックを準備する。
-
-    Act:
-        is_first_run=Falseでdiscover_all()を呼び出す。
-
-    Assert:
-        動画がDISCOVEREDステータスで登録されること。
-    """
-    # Arrange
-    mock_client = Mock()
-    mock_client.get_channel_videos.return_value = [
-        VideoInfo(
-            video_id="video1",
-            title="Test Video 1",
-            published_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            duration="PT1H",
-        ),
-    ]
-
-    # Act
-    count = DiscoverPipeline(
-        client=mock_client,
-        channel_ids=["channel1"],
-        repository=repository,
-        is_first_run=False,
-    ).discover_all()
-
-    # Assert
-    assert count == 1
-    result = repository.get("video1")
-    assert result is not None
-    assert result.status == StreamStatus.DISCOVERED
-
-
+@pytest.mark.parametrize(
+    "published_after",
+    [
+        pytest.param(datetime(2024, 1, 1, tzinfo=timezone.utc), id="with_date"),
+        pytest.param(None, id="without_date"),
+    ],
+)
 def test_discover_all_passes_published_after_to_client(
     repository: StreamRepository,
+    published_after: datetime | None,
 ) -> None:
-    """discover_allがpublished_afterをクライアントに渡すこと.
+    """discover_allがpublished_afterをクライアントに正しく渡すこと.
 
     Arrange:
         YouTube APIクライアントのモックを準備する。
-        published_afterを指定する。
 
     Act:
-        discover_all()を呼び出す。
+        published_afterを指定してdiscover_all()を呼び出す。
 
     Assert:
         クライアントのget_channel_videosがpublished_after付きで呼ばれること。
@@ -161,7 +137,6 @@ def test_discover_all_passes_published_after_to_client(
     # Arrange
     mock_client = Mock()
     mock_client.get_channel_videos.return_value = []
-    published_after = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
     # Act
     DiscoverPipeline(
@@ -175,38 +150,4 @@ def test_discover_all_passes_published_after_to_client(
     # Assert
     mock_client.get_channel_videos.assert_called_once_with(
         "channel1", published_after=published_after
-    )
-
-
-def test_discover_all_passes_none_when_published_after_not_specified(
-    repository: StreamRepository,
-) -> None:
-    """published_after未指定時にNoneがクライアントに渡されること.
-
-    Arrange:
-        YouTube APIクライアントのモックを準備する。
-        published_afterを指定しない。
-
-    Act:
-        discover_all()を呼び出す。
-
-    Assert:
-        クライアントのget_channel_videosがpublished_after=Noneで呼ばれること。
-    """
-    # Arrange
-    mock_client = Mock()
-    mock_client.get_channel_videos.return_value = []
-
-    # Act
-    DiscoverPipeline(
-        client=mock_client,
-        channel_ids=["channel1"],
-        repository=repository,
-        is_first_run=False,
-        published_after=None,
-    ).discover_all()
-
-    # Assert
-    mock_client.get_channel_videos.assert_called_once_with(
-        "channel1", published_after=None
     )

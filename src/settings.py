@@ -64,7 +64,7 @@ class Settings(BaseModel):
             設定オブジェクト
 
         Raises:
-            ValidationError: 必須設定が不足している場合
+            ValueError: 必須設定が不足している場合
         """
         instance = cls(
             youtube_channel_ids=cls._parse_channel_ids(

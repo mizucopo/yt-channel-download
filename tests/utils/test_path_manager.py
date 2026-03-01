@@ -87,5 +87,5 @@ def test_get_thumbnail_path_returns_correct_path(tmp_path: Path) -> None:
     result = path_manager.get_thumbnail_path(video_id, index)
 
     # Assert
-    assert result.name == "thumb_0005.jpg"
+    assert result.name == "thumb_00000005.jpg"
     assert video_id in str(result)

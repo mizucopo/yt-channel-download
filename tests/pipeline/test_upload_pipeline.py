@@ -124,10 +124,20 @@ def test_upload_video_reverts_status_on_failure(
     assert result.status == StreamStatus.THUMBS_DONE
 
 
-def test_upload_video_uses_youtube_title_as_filename(
-    repository: StreamRepository, tmp_path: Path
+@pytest.mark.parametrize(
+    "title,expected_filename",
+    [
+        pytest.param("Test Video Title", "Test Video Title.mp4", id="with_title"),
+        pytest.param(None, "video_id.mp4", id="without_title"),
+    ],
+)
+def test_upload_video_uses_correct_filename(
+    repository: StreamRepository,
+    tmp_path: Path,
+    title: str | None,
+    expected_filename: str,
 ) -> None:
-    """upload_videoがYouTubeタイトルをファイル名として使用すること.
+    """upload_videoがタイトルに応じて正しいファイル名を使用すること.
 
     Arrange:
         thumbs_doneステータスのストリームを登録する。
@@ -138,7 +148,8 @@ def test_upload_video_uses_youtube_title_as_filename(
         タイトルを指定してupload_video()を呼び出す。
 
     Assert:
-        タイトルがファイル名として使用されていること。
+        タイトルありの場合はタイトルをファイル名として使用すること。
+        タイトルなしの場合は元のファイル名を使用すること。
     """
     # Arrange
     video_path = tmp_path / "video_id.mp4"
@@ -148,7 +159,7 @@ def test_upload_video_uses_youtube_title_as_filename(
         Stream(
             video_id="video1",
             status=StreamStatus.THUMBS_DONE,
-            title="Test Video Title",
+            title=title,
             local_path=str(video_path),
         )
     )
@@ -163,60 +174,11 @@ def test_upload_video_uses_youtube_title_as_filename(
         gdrive_root_folder_id="folder_id",
         thumbnail_dir=thumbnail_dir,
         repository=repository,
-    ).upload_video("video1", str(video_path), title="Test Video Title")
+    ).upload_video("video1", str(video_path), title=title)
 
     # Assert
     assert success is True
     mock_provider.upload.assert_called_once_with(
         source_path=str(video_path),
-        destination_filename="Test Video Title.mp4",
-    )
-
-
-def test_upload_video_fallback_to_original_filename_when_title_is_none(
-    repository: StreamRepository, tmp_path: Path
-) -> None:
-    """upload_videoがタイトルなしの場合は元のファイル名を使用すること.
-
-    Arrange:
-        thumbs_doneステータスのストリームを登録する。
-        動画ファイルを作成する。
-        GoogleDriveProviderをモックする。
-
-    Act:
-        タイトルなしでupload_video()を呼び出す。
-
-    Assert:
-        元のファイル名が使用されていること。
-    """
-    # Arrange
-    video_path = tmp_path / "video_id.mp4"
-    video_path.touch()
-
-    repository.insert(
-        Stream(
-            video_id="video1",
-            status=StreamStatus.THUMBS_DONE,
-            title=None,
-            local_path=str(video_path),
-        )
-    )
-
-    mock_provider = Mock()
-    thumbnail_dir = tmp_path / "thumbnails"
-
-    # Act
-    success = UploadPipeline(
-        max_retries=3,
-        gdrive_provider=mock_provider,
-        gdrive_root_folder_id="folder_id",
-        thumbnail_dir=thumbnail_dir,
-        repository=repository,
-    ).upload_video("video1", str(video_path), title=None)
-
-    # Assert
-    assert success is True
-    mock_provider.upload.assert_called_once_with(
-        source_path=str(video_path),
-        destination_filename="video_id.mp4",
+        destination_filename=expected_filename,
     )

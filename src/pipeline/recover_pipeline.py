@@ -36,7 +36,7 @@ class RecoverPipeline:
         """中断されたストリームを回復する.
 
         downloading -> discovered: ダウンロードを再試行
-        thumbs_done -> downloaded: サムネイルディレクトリが存在しない場合のみ
+        thumbs_done -> downloaded: サムネイルディレクトリが存在しないまたは空の場合
         uploading -> thumbs_done: アップロードを再試行
 
         Returns:

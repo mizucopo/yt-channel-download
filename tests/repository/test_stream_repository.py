@@ -260,49 +260,38 @@ def test_get_next_pending_respects_max_retries(repository: StreamRepository) -> 
     assert result.video_id == "video2"
 
 
-def test_is_empty_returns_true_for_empty_table(repository: StreamRepository) -> None:
-    """空のテーブルでTrueが返されること.
-
-    Arrange:
-        レコードが存在しない状態のリポジトリを準備する。
-
-    Act:
-        is_empty()を呼び出す。
-
-    Assert:
-        Trueが返されること。
-    """
-    # Act
-    result = repository.is_empty()
-
-    # Assert
-    assert result is True
-
-
-def test_is_empty_returns_false_for_non_empty_table(
-    repository: StreamRepository,
+@pytest.mark.parametrize(
+    "has_records,expected",
+    [
+        pytest.param(False, True, id="empty_table"),
+        pytest.param(True, False, id="non_empty_table"),
+    ],
+)
+def test_is_empty_returns_correct_value(
+    repository: StreamRepository, has_records: bool, expected: bool
 ) -> None:
-    """レコードが存在する場合Falseが返されること.
+    """is_empty()がテーブルの状態に応じて正しい値を返すこと.
 
     Arrange:
-        ストリームを1件登録する。
+        レコードの有無をパラメータで制御する。
 
     Act:
         is_empty()を呼び出す。
 
     Assert:
-        Falseが返されること。
+        空の場合はTrue、レコードがある場合はFalseが返されること。
     """
     # Arrange
-    repository.insert(
-        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Video 1")
-    )
+    if has_records:
+        repository.insert(
+            Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Video 1")
+        )
 
     # Act
     result = repository.is_empty()
 
     # Assert
-    assert result is False
+    assert result is expected
 
 
 def test_reset_all_retry_counts_resets_all_records(
