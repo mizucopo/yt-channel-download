@@ -75,6 +75,12 @@ class ThumbsPipeline(BasePipeline):
             # 動画ファイルの存在確認
             video_file = Path(stream.local_path)
             if not self._validate_file_exists(video_file, video_id):
+                self._repository.update_status(
+                    video_id,
+                    StreamStatus.DOWNLOADED,
+                    expected_old_status=StreamStatus.THUMBS_DONE,
+                    increment_retry=True,
+                )
                 return False
 
             # サムネイルディレクトリを作成
