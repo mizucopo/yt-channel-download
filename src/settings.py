@@ -5,7 +5,7 @@
 
 from decouple import config
 from mizu_common import GoogleScope
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class Settings(BaseModel):
@@ -56,6 +56,25 @@ class Settings(BaseModel):
             return []
         return [v.strip() for v in value.split(",") if v.strip()]
 
+    @model_validator(mode="after")
+    def validate_required_fields(self) -> "Settings":
+        """必須設定を検証する."""
+        missing: list[str] = []
+        if not self.youtube_channel_ids:
+            missing.append("YOUTUBE_CHANNEL_IDS")
+        if not self.google_oauth_client_id:
+            missing.append("GOOGLE_OAUTH_CLIENT_ID")
+        if not self.google_refresh_token:
+            missing.append("GOOGLE_REFRESH_TOKEN")
+        if not self.gdrive_root_folder_id:
+            missing.append("GDRIVE_ROOT_FOLDER_ID")
+
+        if missing:
+            missing_str = ", ".join(missing)
+            raise ValueError(f"必須の環境変数が設定されていません: {missing_str}")
+
+        return self
+
     @classmethod
     def from_env(cls) -> "Settings":
         """環境変数から設定を読み込む.
@@ -66,7 +85,7 @@ class Settings(BaseModel):
         Raises:
             ValueError: 必須設定が不足している場合
         """
-        instance = cls(
+        return cls(
             youtube_channel_ids=cls._parse_channel_ids(
                 config("YOUTUBE_CHANNEL_IDS", default="")
             ),
@@ -87,20 +106,3 @@ class Settings(BaseModel):
             lock_stale_hours=config("LOCK_STALE_HOURS", default=3, cast=int),
             discord_webhook_url=config("DISCORD_WEBHOOK_URL", default=None),
         )
-
-        # 必須設定の検証
-        missing: list[str] = []
-        if not instance.youtube_channel_ids:
-            missing.append("YOUTUBE_CHANNEL_IDS")
-        if not instance.google_oauth_client_id:
-            missing.append("GOOGLE_OAUTH_CLIENT_ID")
-        if not instance.google_refresh_token:
-            missing.append("GOOGLE_REFRESH_TOKEN")
-        if not instance.gdrive_root_folder_id:
-            missing.append("GDRIVE_ROOT_FOLDER_ID")
-
-        if missing:
-            missing_str = ", ".join(missing)
-            raise ValueError(f"必須の環境変数が設定されていません: {missing_str}")
-
-        return instance
