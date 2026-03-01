@@ -43,7 +43,7 @@ def test_discover_all_skips_existing_videos(repository: StreamRepository) -> Non
     )
 
     mock_client = Mock()
-    mock_client.get_live_archives.return_value = [
+    mock_client.get_channel_videos.return_value = [
         VideoInfo(
             video_id="video1",
             title="Test Video 1",
@@ -79,7 +79,7 @@ def test_discover_all_registers_as_canceled_on_first_run(
     """
     # Arrange
     mock_client = Mock()
-    mock_client.get_live_archives.return_value = [
+    mock_client.get_channel_videos.return_value = [
         VideoInfo(
             video_id="video1",
             title="Test Video 1",
@@ -119,7 +119,7 @@ def test_discover_all_registers_as_discovered_on_normal_run(
     """
     # Arrange
     mock_client = Mock()
-    mock_client.get_live_archives.return_value = [
+    mock_client.get_channel_videos.return_value = [
         VideoInfo(
             video_id="video1",
             title="Test Video 1",

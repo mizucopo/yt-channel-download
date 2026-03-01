@@ -43,6 +43,7 @@ def test_download_video_updates_status_on_success(
     mock_result = Mock()
     mock_result.returncode = 0
     mock_result.stderr = ""
+    mock_result.stdout = "/path/to/video.webm"
 
     download_dir = tmp_path / "downloads"
 

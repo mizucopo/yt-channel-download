@@ -1,6 +1,6 @@
 """動画検出パイプライン.
 
-YouTube APIを使用して新しいライブアーカイブを検出し、データベースに登録する。
+YouTube APIを使用して新しい動画を検出し、データベースに登録する。
 """
 
 import logging
@@ -39,7 +39,7 @@ class DiscoverPipeline:
         self._is_first_run = is_first_run
 
     def discover_all(self) -> int:
-        """新しいライブアーカイブを検出して登録する.
+        """新しい動画を検出して登録する.
 
         Returns:
             新規登録された動画数
@@ -50,7 +50,7 @@ class DiscoverPipeline:
         count = 0
         for channel_id in self._channel_ids:
             logger.info("Discovering videos for channel: %s", channel_id)
-            videos = self._client.get_live_archives(channel_id)
+            videos = self._client.get_channel_videos(channel_id)
 
             for video in videos:
                 existing = self._repository.get(video.video_id)
