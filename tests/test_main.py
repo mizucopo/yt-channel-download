@@ -309,6 +309,7 @@ def test_run_cli_accepts_days_option(
 
     Arrange:
         Main.runをモックする。
+        データベースファイルが存在する状態をシミュレートする。
 
     Act:
         --days 7オプションでrunコマンドを実行する。
@@ -317,6 +318,10 @@ def test_run_cli_accepts_days_option(
         run()がScanMode(days=7)で呼ばれること。
     """
     # Arrange
+    # データベースファイルが存在する状態をシミュレート
+    mock_path_manager.database_path.parent.mkdir(parents=True, exist_ok=True)
+    mock_path_manager.database_path.touch()
+
     with (
         patch("src.main.Settings.from_env", return_value=mock_settings),
         patch("src.main.PathManager", return_value=mock_path_manager),
@@ -394,3 +399,39 @@ def test_run_cli_rejects_invalid_days_value(
     # Assert
     assert result.exit_code != 0
     assert "1以上の整数" in result.output
+
+
+def test_run_cli_rejects_days_option_on_first_run(
+    cli_runner: CliRunner, mock_settings: MagicMock, tmp_path: Path
+) -> None:
+    """初回起動時に -d オプションを指定するとエラーになること.
+
+    Arrange:
+        データベースファイルが存在しないパスマネージャを作成する。
+
+    Act:
+        --daysオプションでrunコマンドを実行する。
+
+    Assert:
+        エラーが表示されること。
+        初回起動時は--fullを指定するよう促すメッセージが表示されること。
+    """
+    # Arrange
+    # データベースファイルが存在しないパスマネージャを作成
+    mock_path_manager = MagicMock()
+    mock_path_manager.download_dir = tmp_path / "downloads"
+    mock_path_manager.thumbnail_dir = tmp_path / "thumbnails"
+    # データベースパスに存在しないファイルを設定
+    nonexistent_db = tmp_path / "nonexistent" / "test.db"
+    mock_path_manager.database_path = nonexistent_db
+
+    # Act
+    with (
+        patch("src.main.Settings.from_env", return_value=mock_settings),
+        patch("src.main.PathManager", return_value=mock_path_manager),
+    ):
+        result = cli_runner.invoke(cli, ["run", "--days", "7"])
+
+    # Assert
+    assert result.exit_code != 0
+    assert "初回起動時は --full を指定してください" in result.output

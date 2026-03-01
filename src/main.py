@@ -317,7 +317,14 @@ def run(ctx: click.Context, full: bool, days: int | None) -> None:
     if days is not None and days <= 0:
         raise click.UsageError("--days には1以上の整数を指定してください。")
 
+    # 初回起動時の -d オプションチェック（initialize() より前に実行）
     app: Main = ctx.obj
+    if days is not None and not app.path_manager.database_path.exists():
+        raise click.UsageError(
+            "初回起動時は --full を指定してください。"
+            "-d オプションは2回目以降に使用できます。"
+        )
+
     app.initialize()
     scan_mode = ScanMode(days=None if full else days)
     app.run(scan_mode)
