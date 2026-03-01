@@ -71,6 +71,8 @@ class BasePipeline(ABC):
     def truncate_error(message: str | None, max_length: int = 500) -> str:
         """エラーメッセージを切り詰める.
 
+        完全なメッセージをログに記録し、DB保存用に切り詰めたメッセージを返す。
+
         Args:
             message: エラーメッセージ
             max_length: 最大文字数
@@ -80,6 +82,11 @@ class BasePipeline(ABC):
         """
         if not message:
             return "Unknown error"
+
+        # 完全なエラーメッセージをログに記録
+        if len(message) > max_length:
+            logger.debug("Full error message (truncated for DB): %s", message)
+
         return message[:max_length]
 
     @abstractmethod
