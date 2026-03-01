@@ -1,7 +1,6 @@
 """動画検出パイプラインのテスト."""
 
 from datetime import datetime, timezone
-from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -11,15 +10,6 @@ from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
 from src.pipeline.discover_pipeline import DiscoverPipeline
 from src.repository.stream_repository import StreamRepository
-
-
-@pytest.fixture
-def repository(tmp_path: Path) -> StreamRepository:
-    """テスト用リポジトリを作成する."""
-    db_path = tmp_path / "test.db"
-    repo = StreamRepository(db_path)
-    repo.init_db()
-    return repo
 
 
 def test_discover_all_skips_existing_videos(repository: StreamRepository) -> None:

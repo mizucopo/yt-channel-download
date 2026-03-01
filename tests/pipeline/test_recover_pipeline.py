@@ -11,15 +11,6 @@ from src.repository.stream_repository import StreamRepository
 
 
 @pytest.fixture
-def repository(tmp_path: Path) -> StreamRepository:
-    """テスト用リポジトリを作成する."""
-    db_path = tmp_path / "test.db"
-    repo = StreamRepository(db_path)
-    repo.init_db()
-    return repo
-
-
-@pytest.fixture
 def thumbnail_dir(tmp_path: Path) -> Path:
     """テスト用サムネイルディレクトリを作成する."""
     return tmp_path / "thumbnails"

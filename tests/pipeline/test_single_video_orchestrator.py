@@ -17,15 +17,6 @@ from src.utils.path_manager import PathManager
 
 
 @pytest.fixture
-def repository(tmp_path: Path) -> StreamRepository:
-    """テスト用リポジトリを作成する."""
-    db_path = tmp_path / "test.db"
-    repo = StreamRepository(db_path)
-    repo.init_db()
-    return repo
-
-
-@pytest.fixture
 def download_pipeline(repository: StreamRepository, tmp_path: Path) -> DownloadPipeline:
     """テスト用ダウンロードパイプラインを作成する."""
     return DownloadPipeline(

@@ -2,22 +2,11 @@
 
 from pathlib import Path
 
-import pytest
-
 from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
 from src.pipeline.cleanup_pipeline import CleanupPipeline
 from src.repository.stream_repository import StreamRepository
 from src.utils.path_manager import PathManager
-
-
-@pytest.fixture
-def repository(tmp_path: Path) -> StreamRepository:
-    """テスト用リポジトリを作成する."""
-    db_path = tmp_path / "test.db"
-    repo = StreamRepository(db_path)
-    repo.init_db()
-    return repo
 
 
 def test_cleanup_video_deletes_files(

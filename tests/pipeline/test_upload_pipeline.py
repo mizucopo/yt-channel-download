@@ -12,15 +12,6 @@ from src.repository.stream_repository import StreamRepository
 from src.utils.path_manager import PathManager
 
 
-@pytest.fixture
-def repository(tmp_path: Path) -> StreamRepository:
-    """テスト用リポジトリを作成する."""
-    db_path = tmp_path / "test.db"
-    repo = StreamRepository(db_path)
-    repo.init_db()
-    return repo
-
-
 def test_upload_video_updates_status_on_success(
     repository: StreamRepository, tmp_path: Path
 ) -> None:
