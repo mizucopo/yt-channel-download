@@ -32,7 +32,7 @@ class RecoverPipeline:
         self._thumbnail_dir = thumbnail_dir
         self._repository = repository
 
-    def recover_all(self) -> int:
+    def run(self) -> int:
         """中断されたストリームを回復する.
 
         downloading -> discovered: ダウンロードを再試行

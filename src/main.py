@@ -162,7 +162,7 @@ class Main:
                 max_retries=self._settings.max_retries,
                 thumbnail_dir=self._path_manager.thumbnail_dir,
                 repository=repository,
-            ).recover_all()
+            ).run()
             click.echo(f"  Recovered: {recovered} streams")
 
             click.echo("Discovering videos...")

@@ -80,7 +80,7 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
         patch("src.main.CleanupPipeline") as mock_cleanup,
         patch("src.main.SingleVideoOrchestrator") as mock_orchestrator,
     ):
-        mock_recover.return_value.recover_all.return_value = 1
+        mock_recover.return_value.run.return_value = 1
         mock_discover.return_value.discover_all.return_value = 1
         mock_orchestrator.return_value.process_all_videos.return_value = 1
 
@@ -136,7 +136,7 @@ def test_run_passes_is_first_run_true_on_empty_database(app: Main) -> None:
         patch("src.main.CleanupPipeline"),
         patch("src.main.SingleVideoOrchestrator") as mock_orchestrator,
     ):
-        mock_recover.return_value.recover_all.return_value = 0
+        mock_recover.return_value.run.return_value = 0
         mock_discover.return_value.discover_all.return_value = 5
         mock_orchestrator.return_value.process_all_videos.return_value = 0
 
