@@ -20,6 +20,7 @@ from mizu_common import (
 from mizu_common.google_drive_provider import GoogleDriveProvider
 
 from src.constants.stream_status import StreamStatus
+from src.models.scan_mode import ScanMode
 from src.notifications.discord_notifier import DiscordNotifier
 from src.pipeline.cleanup_pipeline import CleanupPipeline
 from src.pipeline.discover_pipeline import DiscoverPipeline
@@ -136,11 +137,14 @@ class Main:
         repository = self.get_repository()
         repository.init_db()
 
-    def run(self) -> None:
+    def run(self, scan_mode: ScanMode) -> None:
         """全パイプラインを実行する.
 
         復旧→検出→ダウンロード→サムネイル抽出→アップロード→クリーンアップの
         全ステップを順番に実行する。
+
+        Args:
+            scan_mode: スキャンモード（フルスキャンまたは期間指定）
         """
         with self.acquire_lock():
             click.echo("Starting full pipeline...")
@@ -167,6 +171,7 @@ class Main:
                 channel_ids=self._settings.youtube_channel_ids,
                 repository=repository,
                 is_first_run=is_first_run,
+                published_after=scan_mode.get_published_after(),
             ).discover_all()
             if is_first_run and discovered > 0:
                 click.echo(
@@ -292,11 +297,30 @@ def cli(ctx: click.Context, verbose: bool) -> None:
 
 
 @cli.command()
-@click.pass_obj
-def run(app: Main) -> None:
-    """全パイプラインを実行する."""
+@click.option("-f", "--full", is_flag=True, help="フルスキャン（全期間）")
+@click.option("-d", "--days", type=int, help="過去N日分をスキャン")
+@click.pass_context
+def run(ctx: click.Context, full: bool, days: int | None) -> None:
+    """全パイプラインを実行する.
+
+    -f/--full または -d/--days のいずれかを指定する必要がある。
+    """
+    # オプション未指定時はヘルプを表示
+    if not full and days is None:
+        click.echo(ctx.get_help())
+        ctx.exit()
+        return
+
+    # 相互排他・妥当性チェック
+    if full and days is not None:
+        raise click.UsageError("--full と --days は同時に指定できません。")
+    if days is not None and days <= 0:
+        raise click.UsageError("--days には1以上の整数を指定してください。")
+
+    app: Main = ctx.obj
     app.initialize()
-    app.run()
+    scan_mode = ScanMode(days=None if full else days)
+    app.run(scan_mode)
 
 
 @cli.command()

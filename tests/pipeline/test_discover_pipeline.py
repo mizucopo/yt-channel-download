@@ -141,3 +141,72 @@ def test_discover_all_registers_as_discovered_on_normal_run(
     result = repository.get("video1")
     assert result is not None
     assert result.status == StreamStatus.DISCOVERED
+
+
+def test_discover_all_passes_published_after_to_client(
+    repository: StreamRepository,
+) -> None:
+    """discover_allがpublished_afterをクライアントに渡すこと.
+
+    Arrange:
+        YouTube APIクライアントのモックを準備する。
+        published_afterを指定する。
+
+    Act:
+        discover_all()を呼び出す。
+
+    Assert:
+        クライアントのget_channel_videosがpublished_after付きで呼ばれること。
+    """
+    # Arrange
+    mock_client = Mock()
+    mock_client.get_channel_videos.return_value = []
+    published_after = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+    # Act
+    DiscoverPipeline(
+        client=mock_client,
+        channel_ids=["channel1"],
+        repository=repository,
+        is_first_run=False,
+        published_after=published_after,
+    ).discover_all()
+
+    # Assert
+    mock_client.get_channel_videos.assert_called_once_with(
+        "channel1", published_after=published_after
+    )
+
+
+def test_discover_all_passes_none_when_published_after_not_specified(
+    repository: StreamRepository,
+) -> None:
+    """published_after未指定時にNoneがクライアントに渡されること.
+
+    Arrange:
+        YouTube APIクライアントのモックを準備する。
+        published_afterを指定しない。
+
+    Act:
+        discover_all()を呼び出す。
+
+    Assert:
+        クライアントのget_channel_videosがpublished_after=Noneで呼ばれること。
+    """
+    # Arrange
+    mock_client = Mock()
+    mock_client.get_channel_videos.return_value = []
+
+    # Act
+    DiscoverPipeline(
+        client=mock_client,
+        channel_ids=["channel1"],
+        repository=repository,
+        is_first_run=False,
+        published_after=None,
+    ).discover_all()
+
+    # Assert
+    mock_client.get_channel_videos.assert_called_once_with(
+        "channel1", published_after=None
+    )

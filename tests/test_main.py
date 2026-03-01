@@ -4,9 +4,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from click.testing import CliRunner
 from mizu_common import GoogleScope
 
-from src.main import Main
+from src.main import Main, cli
+from src.models.scan_mode import ScanMode
 
 
 @pytest.fixture
@@ -52,10 +54,11 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
         ロック取得をスキップする。
 
     Act:
-        run()を呼び出す。
+        run()をフルスキャンモードで呼び出す。
 
     Assert:
         各パイプラインが順番に実行されること。
+        DiscoverPipelineにpublished_after=Noneが渡されること。
     """
     # Arrange
     mock_repository = MagicMock()
@@ -82,7 +85,7 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
         mock_orchestrator.return_value.process_all_videos.return_value = 1
 
         # Act
-        app.run()
+        app.run(ScanMode(days=None))
 
         # Assert
         mock_recover.assert_called_once()
@@ -91,6 +94,7 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
             channel_ids=app.settings.youtube_channel_ids,
             repository=mock_repository,
             is_first_run=False,
+            published_after=None,
         )
         mock_download.assert_called_once()
         mock_thumbs.assert_called_once()
@@ -107,7 +111,7 @@ def test_run_passes_is_first_run_true_on_empty_database(app: Main) -> None:
         各パイプラインをモックする。
 
     Act:
-        run()を呼び出す。
+        run()をフルスキャンモードで呼び出す。
 
     Assert:
         DiscoverPipelineにis_first_run=Trueが渡されること。
@@ -137,7 +141,7 @@ def test_run_passes_is_first_run_true_on_empty_database(app: Main) -> None:
         mock_orchestrator.return_value.process_all_videos.return_value = 0
 
         # Act
-        app.run()
+        app.run(ScanMode(days=None))
 
         # Assert
         mock_discover.assert_called_once_with(
@@ -145,6 +149,7 @@ def test_run_passes_is_first_run_true_on_empty_database(app: Main) -> None:
             channel_ids=app.settings.youtube_channel_ids,
             repository=mock_repository,
             is_first_run=True,
+            published_after=None,
         )
 
 
@@ -226,3 +231,166 @@ def test_auth_cmd_fails_on_invalid_credentials(
         with pytest.raises(SystemExit) as exc_info:
             app.auth_cmd()
         assert exc_info.value.code == 1
+
+
+# CLI run コマンドのテスト
+
+
+@pytest.fixture
+def cli_runner() -> CliRunner:
+    """Click CLIテストランナーを作成する."""
+    return CliRunner()
+
+
+def test_run_cli_shows_help_when_no_options(
+    cli_runner: CliRunner, mock_settings: MagicMock, mock_path_manager: MagicMock
+) -> None:
+    """オプション未指定時にヘルプが表示されること.
+
+    Arrange:
+        テストランナーを準備する。
+
+    Act:
+        オプションなしでrunコマンドを実行する。
+
+    Assert:
+        ヘルプが表示されること。
+        正常終了すること。
+    """
+    # Arrange & Act
+    with (
+        patch("src.main.Settings.from_env", return_value=mock_settings),
+        patch("src.main.PathManager", return_value=mock_path_manager),
+    ):
+        result = cli_runner.invoke(cli, ["run"])
+
+    # Assert
+    assert result.exit_code == 0
+    assert "Usage:" in result.output
+    assert "--full" in result.output
+    assert "--days" in result.output
+
+
+def test_run_cli_accepts_full_option(
+    cli_runner: CliRunner, mock_settings: MagicMock, mock_path_manager: MagicMock
+) -> None:
+    """--fullオプションが受け入れられること.
+
+    Arrange:
+        Main.runをモックする。
+
+    Act:
+        --fullオプションでrunコマンドを実行する。
+
+    Assert:
+        run()がScanMode(days=None)で呼ばれること。
+    """
+    # Arrange
+    with (
+        patch("src.main.Settings.from_env", return_value=mock_settings),
+        patch("src.main.PathManager", return_value=mock_path_manager),
+        patch("src.main.Main.initialize"),
+        patch("src.main.Main.run") as mock_run,
+    ):
+        # Act
+        result = cli_runner.invoke(cli, ["run", "--full"])
+
+    # Assert
+    assert result.exit_code == 0
+    mock_run.assert_called_once()
+    call_args = mock_run.call_args[0]
+    assert call_args[0].is_full_scan() is True
+
+
+def test_run_cli_accepts_days_option(
+    cli_runner: CliRunner, mock_settings: MagicMock, mock_path_manager: MagicMock
+) -> None:
+    """--daysオプションが受け入れられること.
+
+    Arrange:
+        Main.runをモックする。
+
+    Act:
+        --days 7オプションでrunコマンドを実行する。
+
+    Assert:
+        run()がScanMode(days=7)で呼ばれること。
+    """
+    # Arrange
+    with (
+        patch("src.main.Settings.from_env", return_value=mock_settings),
+        patch("src.main.PathManager", return_value=mock_path_manager),
+        patch("src.main.Main.initialize"),
+        patch("src.main.Main.run") as mock_run,
+    ):
+        # Act
+        result = cli_runner.invoke(cli, ["run", "--days", "7"])
+
+    # Assert
+    assert result.exit_code == 0
+    mock_run.assert_called_once()
+    call_args = mock_run.call_args[0]
+    assert call_args[0].days == 7
+    assert call_args[0].is_full_scan() is False
+
+
+def test_run_cli_rejects_full_and_days_together(
+    cli_runner: CliRunner, mock_settings: MagicMock, mock_path_manager: MagicMock
+) -> None:
+    """--fullと--daysの同時指定が拒否されること.
+
+    Arrange:
+        テストランナーを準備する。
+
+    Act:
+        --fullと--daysを同時に指定してrunコマンドを実行する。
+
+    Assert:
+        エラーが表示されること。
+    """
+    # Arrange & Act
+    with (
+        patch("src.main.Settings.from_env", return_value=mock_settings),
+        patch("src.main.PathManager", return_value=mock_path_manager),
+    ):
+        result = cli_runner.invoke(cli, ["run", "--full", "--days", "7"])
+
+    # Assert
+    assert result.exit_code != 0
+    assert "同時に指定できません" in result.output
+
+
+@pytest.mark.parametrize(
+    "days_value",
+    [
+        pytest.param(0, id="zero_days"),
+        pytest.param(-1, id="negative_days"),
+    ],
+)
+def test_run_cli_rejects_invalid_days_value(
+    cli_runner: CliRunner,
+    mock_settings: MagicMock,
+    mock_path_manager: MagicMock,
+    days_value: int,
+) -> None:
+    """--daysに0または負の値を指定した場合エラーになること.
+
+    Arrange:
+        テストランナーを準備する。
+
+    Act:
+        無効な値で--daysを指定してrunコマンドを実行する。
+
+    Assert:
+        エラーが表示されること。
+    """
+    # Arrange & Act
+    with (
+        patch("src.main.Settings.from_env", return_value=mock_settings),
+        patch("src.main.PathManager", return_value=mock_path_manager),
+    ):
+        result = cli_runner.invoke(cli, ["run", "--days", str(days_value)])
+
+    # Assert
+    assert result.exit_code != 0
+    assert "1以上の整数" in result.output

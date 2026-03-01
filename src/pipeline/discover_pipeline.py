@@ -5,6 +5,7 @@ YouTube APIを使用して新しい動画を検出し、データベースに登
 
 import logging
 from collections.abc import Sequence
+from datetime import datetime
 
 from mizu_common import YouTubeClient
 
@@ -24,6 +25,7 @@ class DiscoverPipeline:
         channel_ids: Sequence[str],
         repository: StreamRepository,
         is_first_run: bool = False,
+        published_after: datetime | None = None,
     ) -> None:
         """パイプラインを初期化する.
 
@@ -32,11 +34,13 @@ class DiscoverPipeline:
             channel_ids: 検出対象のチャンネルIDリスト
             repository: ストリームリポジトリ
             is_first_run: 初回起動かどうか（Trueの場合、動画をCANCELEDで登録）
+            published_after: この日時以降に公開された動画のみを検出
         """
         self._client = client
         self._channel_ids = channel_ids
         self._repository = repository
         self._is_first_run = is_first_run
+        self._published_after = published_after
 
     def discover_all(self) -> int:
         """新しい動画を検出して登録する.
@@ -50,7 +54,9 @@ class DiscoverPipeline:
         count = 0
         for channel_id in self._channel_ids:
             logger.info("Discovering videos for channel: %s", channel_id)
-            videos = self._client.get_channel_videos(channel_id)
+            videos = self._client.get_channel_videos(
+                channel_id, published_after=self._published_after
+            )
 
             for video in videos:
                 existing = self._repository.get(video.video_id)
