@@ -295,3 +295,17 @@ class StreamRepository:
             return cursor.rowcount > 0
         finally:
             conn.close()
+
+    def reset_all_retry_counts(self) -> int:
+        """すべてのストリームのretry_countを0にリセットする.
+
+        Returns:
+            更新された行数
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute("UPDATE streams SET retry_count = 0")
+            conn.commit()
+            return cursor.rowcount
+        finally:
+            conn.close()

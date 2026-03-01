@@ -146,6 +146,7 @@ class Main:
             click.echo("Starting full pipeline...")
 
             repository = self.get_repository()
+            repository.reset_all_retry_counts()
             is_first_run = repository.is_empty()
             youtube_client = self.get_youtube_client()
             gdrive_provider = self.get_gdrive_provider(

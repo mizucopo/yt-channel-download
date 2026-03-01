@@ -303,3 +303,57 @@ def test_is_empty_returns_false_for_non_empty_table(
 
     # Assert
     assert result is False
+
+
+def test_reset_all_retry_counts_resets_all_records(
+    repository: StreamRepository,
+) -> None:
+    """reset_all_retry_countsですべてのレコードのretry_countが0にリセットされること.
+
+    Arrange:
+        複数のストリームを登録し、retry_countを増加させる。
+
+    Act:
+        reset_all_retry_counts()を呼び出す。
+
+    Assert:
+        すべてのストリームのretry_countが0にリセットされること。
+    """
+    # Arrange
+    repository.insert(
+        Stream(video_id="video1", status=StreamStatus.DISCOVERED, title="Video 1")
+    )
+    repository.insert(
+        Stream(video_id="video2", status=StreamStatus.DISCOVERED, title="Video 2")
+    )
+    # retry_countを増加させる
+    repository.update_status(
+        "video1",
+        StreamStatus.DISCOVERED,
+        expected_old_status=StreamStatus.DISCOVERED,
+        increment_retry=True,
+    )
+    repository.update_status(
+        "video1",
+        StreamStatus.DISCOVERED,
+        expected_old_status=StreamStatus.DISCOVERED,
+        increment_retry=True,
+    )
+    repository.update_status(
+        "video2",
+        StreamStatus.DISCOVERED,
+        expected_old_status=StreamStatus.DISCOVERED,
+        increment_retry=True,
+    )
+
+    # Act
+    count = repository.reset_all_retry_counts()
+
+    # Assert
+    assert count == 2
+    result1 = repository.get("video1")
+    result2 = repository.get("video2")
+    assert result1 is not None
+    assert result2 is not None
+    assert result1.retry_count == 0
+    assert result2.retry_count == 0

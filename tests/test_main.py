@@ -68,19 +68,18 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
         patch.object(app, "get_repository", return_value=mock_repository),
         patch.object(app, "get_youtube_client", return_value=mock_youtube_client),
         patch.object(app, "get_gdrive_provider", return_value=mock_gdrive_provider),
+        patch.object(app, "get_discord_notifier", return_value=None),
         patch("src.main.RecoverPipeline") as mock_recover,
         patch("src.main.DiscoverPipeline") as mock_discover,
         patch("src.main.DownloadPipeline") as mock_download,
         patch("src.main.ThumbsPipeline") as mock_thumbs,
         patch("src.main.UploadPipeline") as mock_upload,
         patch("src.main.CleanupPipeline") as mock_cleanup,
+        patch("src.main.SingleVideoOrchestrator") as mock_orchestrator,
     ):
         mock_recover.return_value.recover_all.return_value = 1
         mock_discover.return_value.discover_all.return_value = 1
-        mock_download.return_value.download_all.return_value = 1
-        mock_thumbs.return_value.extract_all.return_value = 1
-        mock_upload.return_value.upload_all.return_value = 1
-        mock_cleanup.return_value.cleanup_all.return_value = 1
+        mock_orchestrator.return_value.process_all_videos.return_value = 1
 
         # Act
         app.run()
@@ -97,6 +96,7 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
         mock_thumbs.assert_called_once()
         mock_upload.assert_called_once()
         mock_cleanup.assert_called_once()
+        mock_orchestrator.assert_called_once()
 
 
 def test_run_passes_is_first_run_true_on_empty_database(app: Main) -> None:
@@ -123,19 +123,18 @@ def test_run_passes_is_first_run_true_on_empty_database(app: Main) -> None:
         patch.object(app, "get_repository", return_value=mock_repository),
         patch.object(app, "get_youtube_client", return_value=mock_youtube_client),
         patch.object(app, "get_gdrive_provider", return_value=mock_gdrive_provider),
+        patch.object(app, "get_discord_notifier", return_value=None),
         patch("src.main.RecoverPipeline") as mock_recover,
         patch("src.main.DiscoverPipeline") as mock_discover,
-        patch("src.main.DownloadPipeline") as mock_download,
-        patch("src.main.ThumbsPipeline") as mock_thumbs,
-        patch("src.main.UploadPipeline") as mock_upload,
-        patch("src.main.CleanupPipeline") as mock_cleanup,
+        patch("src.main.DownloadPipeline"),
+        patch("src.main.ThumbsPipeline"),
+        patch("src.main.UploadPipeline"),
+        patch("src.main.CleanupPipeline"),
+        patch("src.main.SingleVideoOrchestrator") as mock_orchestrator,
     ):
         mock_recover.return_value.recover_all.return_value = 0
         mock_discover.return_value.discover_all.return_value = 5
-        mock_download.return_value.download_all.return_value = 0
-        mock_thumbs.return_value.extract_all.return_value = 0
-        mock_upload.return_value.upload_all.return_value = 0
-        mock_cleanup.return_value.cleanup_all.return_value = 0
+        mock_orchestrator.return_value.process_all_videos.return_value = 0
 
         # Act
         app.run()
