@@ -41,13 +41,22 @@ class UploadPipeline(BasePipeline):
         self._gdrive_provider = gdrive_provider
         self._gdrive_root_folder_id = gdrive_root_folder_id
         self._path_manager = path_manager
+        self._current_gdrive_filename: str | None = None
 
     def _get_pending_status(self) -> StreamStatus:
         """処理待ちステータスを取得する."""
         return StreamStatus.THUMBS_DONE
 
-    def _process_single(self, video_id: str, stream: Stream) -> bool:
-        """単一のストリームを処理する.
+    def _get_processing_status(self) -> StreamStatus:
+        """処理中ステータスを取得する."""
+        return StreamStatus.UPLOADING
+
+    def _get_completed_status(self) -> StreamStatus:
+        """完了ステータスを取得する."""
+        return StreamStatus.UPLOADED
+
+    def _execute_process(self, video_id: str, stream: Stream) -> bool:
+        """アップロード処理を実行する.
 
         Args:
             video_id: YouTube動画ID
@@ -59,74 +68,50 @@ class UploadPipeline(BasePipeline):
         if stream.local_path is None:
             return False
 
-        # CAS更新: thumbs_done -> uploading
-        updated = self._repository.update_status(
-            video_id,
-            StreamStatus.UPLOADING,
-            expected_old_status=StreamStatus.THUMBS_DONE,
+        # 動画ファイルの存在確認
+        video_file = Path(stream.local_path)
+        if not self._validate_file_exists(video_file, video_id):
+            return False
+
+        folder_name = GoogleDriveProvider.sanitize_name(stream.title or video_id)
+        gdrive_filename = (
+            f"{GoogleDriveProvider.sanitize_name(stream.title)}{video_file.suffix}"
+            if stream.title
+            else video_file.name
         )
-        if not updated:
-            logger.warning("Failed to acquire lock for upload: %s", video_id)
-            return False
 
-        try:
-            # 動画ファイルをアップロード
-            video_file = Path(stream.local_path)
-            if not self._validate_file_exists(video_file, video_id):
-                self._repository.update_status(
-                    video_id,
-                    StreamStatus.THUMBS_DONE,
-                    expected_old_status=StreamStatus.UPLOADING,
-                    increment_retry=True,
-                )
-                return False
+        logger.info("Uploading video: %s", video_id)
+        self._gdrive_provider.upload(
+            source_path=str(video_file),
+            destination_filename=gdrive_filename,
+        )
 
-            folder_name = GoogleDriveProvider.sanitize_name(stream.title or video_id)
-            gdrive_filename = (
-                f"{GoogleDriveProvider.sanitize_name(stream.title)}{video_file.suffix}"
-                if stream.title
-                else video_file.name
-            )
+        # サムネイルファイルを個別にアップロード
+        thumb_dir = self._path_manager.get_thumbnail_dir(video_id)
+        if thumb_dir.exists():
+            logger.info("Uploading thumbnails: %s", video_id)
+            for thumb_file in sorted(thumb_dir.iterdir()):
+                if thumb_file.is_file():
+                    self._gdrive_provider.upload(
+                        source_path=str(thumb_file),
+                        destination_filename=f"{folder_name}/{thumb_file.name}",
+                    )
 
-            logger.info("Uploading video: %s", video_id)
-            self._gdrive_provider.upload(
-                source_path=str(video_file),
-                destination_filename=gdrive_filename,
-            )
+        self._current_gdrive_filename = gdrive_filename
+        logger.info("Upload completed: %s", video_id)
+        return True
 
-            # サムネイルファイルを個別にアップロード
-            thumb_dir = self._path_manager.get_thumbnail_dir(video_id)
-            if thumb_dir.exists():
-                logger.info("Uploading thumbnails: %s", video_id)
-                for thumb_file in sorted(thumb_dir.iterdir()):
-                    if thumb_file.is_file():
-                        self._gdrive_provider.upload(
-                            source_path=str(thumb_file),
-                            destination_filename=f"{folder_name}/{thumb_file.name}",
-                        )
-
-            # CAS更新: uploading -> uploaded
-            self._repository.update_status(
-                video_id,
-                StreamStatus.UPLOADED,
-                expected_old_status=StreamStatus.UPLOADING,
-                gdrive_file_id="",  # 新APIではファイルIDを返さない
-                gdrive_file_name=gdrive_filename,
-            )
-            logger.info("Upload completed: %s", video_id)
-
-            return True
-
-        except Exception as e:
-            logger.exception("Upload error for %s", video_id)
-            self._repository.update_status(
-                video_id,
-                StreamStatus.THUMBS_DONE,
-                expected_old_status=StreamStatus.UPLOADING,
-                error_message=self.truncate_error(str(e)),
-                increment_retry=True,
-            )
-            return False
+    def _update_completed_status(
+        self, video_id: str, processing_status: StreamStatus
+    ) -> None:
+        """処理完了時のステータス更新（gdrive_file_nameも設定）."""
+        self._repository.update_status(
+            video_id,
+            self._get_completed_status(),
+            expected_old_status=processing_status,
+            gdrive_file_id="",  # 新APIではファイルIDを返さない
+            gdrive_file_name=self._current_gdrive_filename,
+        )
 
     def upload_next(self) -> bool:
         """次の待機中の動画をアップロードする.

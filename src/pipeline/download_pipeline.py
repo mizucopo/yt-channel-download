@@ -35,13 +35,22 @@ class DownloadPipeline(BasePipeline):
         """
         super().__init__(max_retries, repository)
         self._download_dir = download_dir
+        self._current_local_path: str | None = None
 
     def _get_pending_status(self) -> StreamStatus:
         """処理待ちステータスを取得する."""
         return StreamStatus.DISCOVERED
 
-    def _process_single(self, video_id: str, _stream: Stream) -> bool:
-        """単一のストリームを処理する.
+    def _get_processing_status(self) -> StreamStatus:
+        """処理中ステータスを取得する."""
+        return StreamStatus.DOWNLOADING
+
+    def _get_completed_status(self) -> StreamStatus:
+        """完了ステータスを取得する."""
+        return StreamStatus.DOWNLOADED
+
+    def _execute_process(self, video_id: str, _stream: Stream) -> bool:
+        """ダウンロード処理を実行する.
 
         Args:
             video_id: YouTube動画ID
@@ -50,73 +59,47 @@ class DownloadPipeline(BasePipeline):
         Returns:
             処理が成功した場合はTrue
         """
-        # CAS更新: discovered -> downloading
-        updated = self._repository.update_status(
-            video_id,
-            StreamStatus.DOWNLOADING,
-            expected_old_status=StreamStatus.DISCOVERED,
+        output_template = self._download_dir / f"{video_id}.%(ext)s"
+        url = f"https://www.youtube.com/watch?v={video_id}"
+
+        logger.info("Downloading video: %s", video_id)
+        result = subprocess.run(
+            [
+                "yt-dlp",
+                "-f",
+                self.DEFAULT_VIDEO_FORMAT,
+                "-o",
+                str(output_template),
+                "--print",
+                "after_move:filepath",
+                "--no-playlist",
+                "--no-warnings",
+                url,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
         )
-        if not updated:
-            logger.warning("Failed to acquire lock for video: %s", video_id)
+
+        if result.returncode != 0:
+            logger.error("Download failed for %s: %s", video_id, result.stderr)
             return False
 
-        try:
-            output_template = self._download_dir / f"{video_id}.%(ext)s"
-            url = f"https://www.youtube.com/watch?v={video_id}"
+        # yt-dlpが出力した実際のファイルパスを保存
+        self._current_local_path = result.stdout.strip()
+        logger.info("Download completed: %s", video_id)
+        return True
 
-            logger.info("Downloading video: %s", video_id)
-            result = subprocess.run(
-                [
-                    "yt-dlp",
-                    "-f",
-                    self.DEFAULT_VIDEO_FORMAT,
-                    "-o",
-                    str(output_template),
-                    "--print",
-                    "after_move:filepath",
-                    "--no-playlist",
-                    "--no-warnings",
-                    url,
-                ],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if result.returncode != 0:
-                logger.error("Download failed for %s: %s", video_id, result.stderr)
-                self._repository.update_status(
-                    video_id,
-                    StreamStatus.DISCOVERED,
-                    expected_old_status=StreamStatus.DOWNLOADING,
-                    error_message=self.truncate_error(result.stderr),
-                    increment_retry=True,
-                )
-                return False
-
-            # yt-dlpが出力した実際のファイルパスを取得
-            actual_path = result.stdout.strip()
-
-            # CAS更新: downloading -> downloaded
-            self._repository.update_status(
-                video_id,
-                StreamStatus.DOWNLOADED,
-                expected_old_status=StreamStatus.DOWNLOADING,
-                local_path=actual_path,
-            )
-            logger.info("Download completed: %s", video_id)
-            return True
-
-        except Exception as e:
-            logger.exception("Download error for %s", video_id)
-            self._repository.update_status(
-                video_id,
-                StreamStatus.DISCOVERED,
-                expected_old_status=StreamStatus.DOWNLOADING,
-                error_message=self.truncate_error(str(e)),
-                increment_retry=True,
-            )
-            return False
+    def _update_completed_status(
+        self, video_id: str, processing_status: StreamStatus
+    ) -> None:
+        """処理完了時のステータス更新（local_pathも設定）."""
+        self._repository.update_status(
+            video_id,
+            self._get_completed_status(),
+            expected_old_status=processing_status,
+            local_path=self._current_local_path,
+        )
 
     def download_video(self, video_id: str) -> bool:
         """指定された動画をダウンロードする.

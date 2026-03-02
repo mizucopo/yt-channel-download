@@ -110,7 +110,108 @@ class BasePipeline(ABC):
         """処理待ちステータスを取得する."""
         pass
 
+    def _get_processing_status(self) -> StreamStatus:
+        """処理中ステータスを取得する.
+
+        デフォルトは処理待ちステータスと同じ（ロック取得をスキップ）。
+        """
+        return self._get_pending_status()
+
     @abstractmethod
-    def _process_single(self, video_id: str, stream: Stream) -> bool:
-        """単一のストリームを処理する."""
+    def _get_completed_status(self) -> StreamStatus:
+        """完了ステータスを取得する."""
         pass
+
+    @abstractmethod
+    def _execute_process(self, video_id: str, stream: Stream) -> bool:
+        """実際の処理を実行する.
+
+        Args:
+            video_id: 動画ID
+            stream: ストリーム情報
+
+        Returns:
+            処理が成功した場合はTrue
+        """
+        pass
+
+    def _rollback_on_failure(
+        self, video_id: str, error_message: str | None = None
+    ) -> None:
+        """失敗時の巻き戻し処理.
+
+        デフォルトは処理前ステータスに戻し、リトライカウントを増やす。
+        処理中ステータスがない場合（processing_status == pending_status）は何もしない。
+
+        Args:
+            video_id: 動画ID
+            error_message: エラーメッセージ
+        """
+        status_to_rollback = self._get_pending_status()
+        processing_status = self._get_processing_status()
+        if processing_status != status_to_rollback:
+            self._repository.update_status(
+                video_id,
+                status_to_rollback,
+                expected_old_status=processing_status,
+                error_message=error_message,
+                increment_retry=True,
+            )
+
+    def _process_single(self, video_id: str, stream: Stream) -> bool:
+        """単一のストリームを処理する.
+
+        テンプレートメソッドパターンで共通フローを提供する。
+
+        Args:
+            video_id: 動画ID
+            stream: ストリーム情報
+
+        Returns:
+            処理が成功した場合はTrue
+        """
+        processing_status = self._get_processing_status()
+        pending_status = self._get_pending_status()
+
+        # ロック取得（処理中ステータスがある場合のみ）
+        if processing_status != pending_status:
+            updated = self._repository.update_status(
+                video_id,
+                processing_status,
+                expected_old_status=pending_status,
+            )
+            if not updated:
+                logger.warning("Failed to acquire lock: %s", video_id)
+                return False
+
+        try:
+            success = self._execute_process(video_id, stream)
+            if success:
+                self._update_completed_status(video_id, processing_status)
+                return True
+            else:
+                self._rollback_on_failure(video_id)
+                return False
+        except Exception as e:
+            logger.exception("Process error: %s", video_id)
+            self._rollback_on_failure(
+                video_id, error_message=self.truncate_error(str(e))
+            )
+            return False
+
+    def _update_completed_status(
+        self, video_id: str, processing_status: StreamStatus
+    ) -> None:
+        """処理完了時のステータス更新.
+
+        サブクラスで追加パラメータを設定するためにオーバーライド可能。
+
+        Args:
+            video_id: 動画ID
+            processing_status: 処理中ステータス
+        """
+        self._repository.update_status(
+            video_id,
+            self._get_completed_status(),
+            expected_old_status=processing_status,
+        )

@@ -42,8 +42,12 @@ class CleanupPipeline(BasePipeline):
         """処理待ちステータスを取得する."""
         return StreamStatus.UPLOADED
 
-    def _process_single(self, video_id: str, stream: Stream) -> bool:
-        """単一のストリームを処理する.
+    def _get_completed_status(self) -> StreamStatus:
+        """完了ステータスを取得する."""
+        return StreamStatus.CLEANED
+
+    def _execute_process(self, video_id: str, stream: Stream) -> bool:
+        """クリーンアップ処理を実行する.
 
         Args:
             video_id: YouTube動画ID
@@ -55,36 +59,25 @@ class CleanupPipeline(BasePipeline):
         if stream.local_path is None:
             return False
 
-        # CAS更新: uploaded -> cleaned
-        updated = self._repository.update_status(
-            video_id,
-            StreamStatus.CLEANED,
-            expected_old_status=StreamStatus.UPLOADED,
-        )
-        if not updated:
-            logger.warning("Failed to acquire lock for cleanup: %s", video_id)
-            return False
+        # 動画ファイルを削除
+        video_file = Path(stream.local_path)
+        if video_file.exists():
+            video_file.unlink()
+            logger.info("Deleted video file: %s", stream.local_path)
 
-        try:
-            # 動画ファイルを削除
-            video_file = Path(stream.local_path)
-            if video_file.exists():
-                video_file.unlink()
-                logger.info("Deleted video file: %s", stream.local_path)
+        # サムネイルディレクトリを削除
+        thumb_dir = self._path_manager.get_thumbnail_dir(video_id)
+        if thumb_dir.exists():
+            shutil.rmtree(thumb_dir)
+            logger.info("Deleted thumbnail directory: %s", thumb_dir)
 
-            # サムネイルディレクトリを削除
-            thumb_dir = self._path_manager.get_thumbnail_dir(video_id)
-            if thumb_dir.exists():
-                shutil.rmtree(thumb_dir)
-                logger.info("Deleted thumbnail directory: %s", thumb_dir)
+        logger.info("Cleanup completed: %s", video_id)
+        return True
 
-            logger.info("Cleanup completed: %s", video_id)
-            return True
-
-        except Exception:
-            logger.exception("Cleanup error for %s", video_id)
-            # クリーンアップエラーはリトライしない（状態はuploadedのまま）
-            return False
+    def _rollback_on_failure(
+        self, video_id: str, error_message: str | None = None
+    ) -> None:
+        """クリーンアップはリトライしない."""
 
     def cleanup_next(self) -> bool:
         """次の待機中の動画をクリーンアップする.
