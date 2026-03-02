@@ -30,11 +30,11 @@ COPY --from=builder /app/src /app/src
 COPY --from=builder /app/stubs /app/stubs
 
 # データディレクトリを作成
-RUN mkdir -p /app/data/downloads /app/data/thumbnails
+RUN mkdir -p /app/data/databases /app/data/downloads /app/data/thumbnails
 
 # 環境変数を設定
 ENV PATH="/app/.venv/bin:$PATH"
-ENV DATABASE_PATH=/app/data/streams.db
+ENV DATABASE_PATH=/app/data/databases/streams.db
 ENV DOWNLOAD_DIR=/app/data/downloads
 ENV THUMBNAIL_DIR=/app/data/thumbnails
 
