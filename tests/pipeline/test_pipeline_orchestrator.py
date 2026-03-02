@@ -175,25 +175,34 @@ def test_run_runs_full_pipeline(
     mock_single.process_all_videos.assert_called_once()
 
 
-def test_run_shows_first_run_message_when_discovered_on_first_run(
+@pytest.mark.parametrize(
+    "is_first_run,expected_message",
+    [
+        pytest.param(True, "First run", id="first_run"),
+        pytest.param(False, "Discovered", id="not_first_run"),
+    ],
+)
+def test_run_shows_correct_message_based_on_first_run(
     mock_settings: Settings,
     mock_path_manager: PathManager,
     mock_client_factory: MagicMock,
     mock_repository: MagicMock,
+    is_first_run: bool,
+    expected_message: str,
 ) -> None:
-    """初回実行時に動画が検出された場合、専用メッセージが表示されること.
+    """初回実行時と2回目以降で適切なメッセージが表示されること.
 
     Arrange:
-        is_empty()がTrueを返すようにモック。
+        is_empty()の戻り値をパラメータで制御する。
 
     Act:
         run()を呼び出す。
 
     Assert:
-        初回実行メッセージが表示されること。
+        適切なメッセージが表示されること。
     """
     # Arrange
-    mock_repository.is_empty.return_value = True
+    mock_repository.is_empty.return_value = is_first_run
     orchestrator = PipelineOrchestrator(
         mock_settings, mock_path_manager, mock_client_factory
     )
@@ -225,57 +234,4 @@ def test_run_shows_first_run_message_when_discovered_on_first_run(
 
     # Assert
     echo_calls = [str(call) for call in mock_echo.call_args_list]
-    assert any("First run" in call for call in echo_calls)
-
-
-def test_run_shows_discovered_message_when_not_first_run(
-    mock_settings: Settings,
-    mock_path_manager: PathManager,
-    mock_client_factory: MagicMock,
-    mock_repository: MagicMock,
-) -> None:
-    """2回目以降に動画が検出された場合、通常メッセージが表示されること.
-
-    Arrange:
-        is_empty()がFalseを返すようにモック。
-
-    Act:
-        run()を呼び出す。
-
-    Assert:
-        通常の検出メッセージが表示されること。
-    """
-    # Arrange
-    mock_repository.is_empty.return_value = False
-    orchestrator = PipelineOrchestrator(
-        mock_settings, mock_path_manager, mock_client_factory
-    )
-    scan_mode = MagicMock(spec=ScanMode)
-    scan_mode.get_published_after.return_value = None
-
-    with (
-        patch("src.pipeline.pipeline_orchestrator.RecoverPipeline") as mock_recover,
-        patch(
-            "src.pipeline.pipeline_orchestrator.DiscoverPipeline"
-        ) as mock_discover_class,
-        patch("src.pipeline.pipeline_orchestrator.DownloadPipeline"),
-        patch("src.pipeline.pipeline_orchestrator.ThumbsPipeline"),
-        patch("src.pipeline.pipeline_orchestrator.UploadPipeline"),
-        patch("src.pipeline.pipeline_orchestrator.CleanupPipeline"),
-        patch(
-            "src.pipeline.pipeline_orchestrator.SingleVideoOrchestrator"
-        ) as mock_single,
-        patch("click.echo") as mock_echo,
-    ):
-        mock_recover.return_value.run.return_value = 0
-        mock_discover = MagicMock()
-        mock_discover.discover_all.return_value = 5
-        mock_discover_class.return_value = mock_discover
-        mock_single.return_value.process_all_videos.return_value = 0
-
-        # Act
-        orchestrator.run(mock_repository, scan_mode)
-
-    # Assert
-    echo_calls = [str(call) for call in mock_echo.call_args_list]
-    assert any("Discovered" in call for call in echo_calls)
+    assert any(expected_message in call for call in echo_calls)

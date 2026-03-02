@@ -198,13 +198,22 @@ def test_get_discord_notifier_returns_discord_notifier_when_webhook_url_set(
     )
 
 
+@pytest.mark.parametrize(
+    "webhook_url",
+    [
+        pytest.param("", id="empty_string"),
+        pytest.param(None, id="none"),
+    ],
+)
 def test_get_discord_notifier_returns_none_when_webhook_url_not_set(
-    mock_settings: Settings, mock_path_manager: PathManager
+    mock_settings: Settings,
+    mock_path_manager: PathManager,
+    webhook_url: str | None,
 ) -> None:
     """webhook_urlが未設定の場合、Noneが返されること.
 
     Arrange:
-        discord_webhook_urlを空文字に設定。
+        discord_webhook_urlを空文字またはNoneに設定。
 
     Act:
         get_discord_notifier()を呼び出す。
@@ -213,32 +222,7 @@ def test_get_discord_notifier_returns_none_when_webhook_url_not_set(
         Noneが返されること。
     """
     # Arrange
-    mock_settings.discord_webhook_url = ""
-    factory = ClientFactory(mock_settings, mock_path_manager)
-
-    # Act
-    result = factory.get_discord_notifier()
-
-    # Assert
-    assert result is None
-
-
-def test_get_discord_notifier_returns_none_when_webhook_url_is_none(
-    mock_settings: Settings, mock_path_manager: PathManager
-) -> None:
-    """webhook_urlがNoneの場合、Noneが返されること.
-
-    Arrange:
-        discord_webhook_urlをNoneに設定。
-
-    Act:
-        get_discord_notifier()を呼び出す。
-
-    Assert:
-        Noneが返されること。
-    """
-    # Arrange
-    mock_settings.discord_webhook_url = None
+    mock_settings.discord_webhook_url = webhook_url
     factory = ClientFactory(mock_settings, mock_path_manager)
 
     # Act

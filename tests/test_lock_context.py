@@ -98,35 +98,6 @@ def test_acquire_exits_when_already_running(
     mock_echo.assert_called_once_with(expected_msg)
 
 
-def test_get_lock_manager_returns_lock_manager(
-    mock_settings: Settings, mock_path_manager: PathManager
-) -> None:
-    """LockManagerが生成されること.
-
-    Arrange:
-        LockManagerをモック。
-
-    Act:
-        get_lock_manager()を呼び出す。
-
-    Assert:
-        download_dirが渡されてLockManagerが生成されること。
-    """
-    # Arrange
-    lock_context = LockContext(mock_settings, mock_path_manager)
-    mock_lock_manager = MagicMock()
-
-    with patch(
-        "src.lock_context.LockManager", return_value=mock_lock_manager
-    ) as mock_class:
-        # Act
-        result = lock_context.get_lock_manager()
-
-    # Assert
-    assert result is mock_lock_manager
-    mock_class.assert_called_once_with(lock_dir=mock_path_manager.download_dir)
-
-
 def test_release_releases_lock_when_locked(
     mock_settings: Settings, mock_path_manager: PathManager
 ) -> None:

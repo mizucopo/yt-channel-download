@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
-from mizu_common import GoogleScope
 
 from src.main import Main, cli
 from src.models.scan_mode import ScanMode
@@ -46,8 +45,8 @@ def app(mock_settings: MagicMock, mock_path_manager: MagicMock) -> Main:
         return Main()
 
 
-def test_run_executes_all_pipelines_in_order(app: Main) -> None:
-    """run()がパイプラインオーケストレーターを実行すること.
+def test_run_delegates_to_pipeline_orchestrator(app: Main) -> None:
+    """run()がパイプラインオーケストレーターに処理を委譲すること.
 
     Arrange:
         パイプラインオーケストレーターをモックする。
@@ -76,121 +75,6 @@ def test_run_executes_all_pipelines_in_order(app: Main) -> None:
 
         # Assert
         mock_orchestrator.run.assert_called_once_with(mock_repository, scan_mode)
-
-
-def test_run_passes_is_first_run_true_on_empty_database(app: Main) -> None:
-    """run()がリポジトリをパイプラインオーケストレーターに渡すこと.
-
-    Arrange:
-        パイプラインオーケストレーターをモックする。
-
-    Act:
-        run()をフルスキャンモードで呼び出す。
-
-    Assert:
-        パイプラインオーケストレーターにリポジトリが渡されること。
-    """
-    # Arrange
-    mock_repository = MagicMock()
-    mock_repository.is_empty.return_value = True
-    scan_mode = ScanMode(days=None)
-
-    with (
-        patch.object(app, "_lock_context") as mock_lock_context,
-        patch.object(app, "get_repository", return_value=mock_repository),
-        patch.object(app, "_pipeline_orchestrator") as mock_orchestrator,
-    ):
-        mock_lock_context.acquire.return_value.__enter__ = MagicMock(return_value=None)
-        mock_lock_context.acquire.return_value.__exit__ = MagicMock(return_value=False)
-
-        # Act
-        app.run(scan_mode)
-
-        # Assert
-        mock_orchestrator.run.assert_called_once_with(mock_repository, scan_mode)
-
-
-def test_auth_cmd_succeeds_with_valid_credentials(app: Main) -> None:
-    """auth_cmd()が有効な認証情報で成功すること.
-
-    Arrange:
-        設定にCLIENT_IDとCLIENT_SECRETを設定する。
-        GoogleOAuthClient.authenticateをモックする。
-
-    Act:
-        auth_cmd()を呼び出す。
-
-    Assert:
-        authenticateが正しい引数で呼ばれること。
-        リフレッシュトークンが出力されること。
-    """
-    # Arrange
-    app.settings.google_oauth_client_id = "test_client_id"
-    app.settings.google_oauth_client_secret = "test_client_secret"
-
-    with (
-        patch(
-            "src.commands.auth_command.GoogleOAuthClient.authenticate",
-            return_value="test_refresh_token",
-        ) as mock_auth,
-        patch("src.commands.auth_command.click.echo") as mock_echo,
-    ):
-        # Act
-        app.auth_cmd()
-
-        # Assert
-        mock_auth.assert_called_once_with(
-            "test_client_id",
-            "test_client_secret",
-            [GoogleScope.YOUTUBE_READONLY, GoogleScope.DRIVE_FILE],
-        )
-        # リフレッシュトークンを含むメッセージが出力されること
-        calls = mock_echo.call_args_list
-        assert any("test_refresh_token" in str(call) for call in calls)
-
-
-@pytest.mark.parametrize(
-    "client_id,client_secret,should_mock_auth",
-    [
-        pytest.param("test_client_id", "", False, id="missing_client_secret"),
-        pytest.param("", "test_client_secret", False, id="missing_client_id"),
-        pytest.param("test_client_id", "test_client_secret", True, id="auth_failure"),
-    ],
-)
-def test_auth_cmd_fails_on_invalid_credentials(
-    app: Main,
-    client_id: str,
-    client_secret: str,
-    should_mock_auth: bool,
-) -> None:
-    """auth_cmd()が無効な認証情報で失敗すること.
-
-    Arrange:
-        認証情報を設定する（CLIENT_ID/CLIENT_SECRET未設定または認証失敗）。
-
-    Act:
-        auth_cmd()を呼び出す。
-
-    Assert:
-        SystemExit(1)が発生すること。
-    """
-    # Arrange
-    app.settings.google_oauth_client_id = client_id
-    app.settings.google_oauth_client_secret = client_secret
-
-    # Act & Assert
-    if should_mock_auth:
-        with patch(
-            "src.commands.auth_command.GoogleOAuthClient.authenticate",
-            return_value=None,
-        ):
-            with pytest.raises(SystemExit) as exc_info:
-                app.auth_cmd()
-            assert exc_info.value.code == 1
-    else:
-        with pytest.raises(SystemExit) as exc_info:
-            app.auth_cmd()
-        assert exc_info.value.code == 1
 
 
 # CLI run コマンドのテスト

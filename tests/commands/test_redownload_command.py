@@ -1,6 +1,5 @@
 """再ダウンロードコマンドのテスト."""
 
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -9,15 +8,6 @@ from src.commands.redownload_command import RedownloadCommand
 from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
 from src.repository.stream_repository import StreamRepository
-
-
-@pytest.fixture
-def repository(tmp_path: Path) -> StreamRepository:
-    """テスト用リポジトリを作成する."""
-    db_path = tmp_path / "test.db"
-    repo = StreamRepository(db_path)
-    repo.init_db()
-    return repo
 
 
 def test_execute_resets_existing_video(repository: StreamRepository) -> None:

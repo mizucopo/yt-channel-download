@@ -55,11 +55,20 @@ def test_execute_succeeds_with_valid_credentials(mock_settings: MagicMock) -> No
         assert any("test_refresh_token" in str(call) for call in calls)
 
 
-def test_execute_fails_when_client_secret_missing(mock_settings: MagicMock) -> None:
-    """CLIENT_SECRETが未設定の場合に失敗すること.
+@pytest.mark.parametrize(
+    "missing_field",
+    [
+        pytest.param("client_id", id="client_id_missing"),
+        pytest.param("client_secret", id="client_secret_missing"),
+    ],
+)
+def test_execute_fails_when_required_field_missing(
+    mock_settings: MagicMock, missing_field: str
+) -> None:
+    """必須フィールドが未設定の場合に失敗すること.
 
     Arrange:
-        設定のCLIENT_SECRETを空にする。
+        指定されたフィールドを空にする。
 
     Act:
         execute()を呼び出す。
@@ -68,29 +77,10 @@ def test_execute_fails_when_client_secret_missing(mock_settings: MagicMock) -> N
         SystemExit(1)が発生すること。
     """
     # Arrange
-    mock_settings.google_oauth_client_secret = ""
-    command = AuthCommand(mock_settings)
-
-    # Act & Assert
-    with pytest.raises(SystemExit) as exc_info:
-        command.execute()
-    assert exc_info.value.code == 1
-
-
-def test_execute_fails_when_client_id_missing(mock_settings: MagicMock) -> None:
-    """CLIENT_IDが未設定の場合に失敗すること.
-
-    Arrange:
-        設定のCLIENT_IDを空にする。
-
-    Act:
-        execute()を呼び出す。
-
-    Assert:
-        SystemExit(1)が発生すること。
-    """
-    # Arrange
-    mock_settings.google_oauth_client_id = ""
+    if missing_field == "client_id":
+        mock_settings.google_oauth_client_id = ""
+    else:
+        mock_settings.google_oauth_client_secret = ""
     command = AuthCommand(mock_settings)
 
     # Act & Assert

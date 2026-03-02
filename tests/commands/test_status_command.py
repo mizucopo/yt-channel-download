@@ -1,22 +1,10 @@
 """ステータス表示コマンドのテスト."""
 
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from src.commands.status_command import StatusCommand
 from src.constants.stream_status import StreamStatus
 from src.repository.stream_repository import StreamRepository
-
-
-@pytest.fixture
-def repository(tmp_path: Path) -> StreamRepository:
-    """テスト用リポジトリを作成する."""
-    db_path = tmp_path / "test.db"
-    repo = StreamRepository(db_path)
-    repo.init_db()
-    return repo
 
 
 def test_execute_displays_all_stream_statuses(repository: StreamRepository) -> None:
@@ -103,44 +91,3 @@ def test_execute_shows_zero_for_empty_status(repository: StreamRepository) -> No
                 call for call in mock_echo.call_args_list if status.value in str(call)
             )
             assert f"{status.value}: 0" in str(status_call)
-
-
-def test_execute_shows_count_for_streams(repository: StreamRepository) -> None:
-    """ストリーム数が正しくカウントされること.
-
-    Arrange:
-        同じステータスに複数のストリームを登録する。
-        click.echoをモックする。
-
-    Act:
-        execute()を呼び出す。
-
-    Assert:
-        正しい件数が表示されること。
-    """
-    # Arrange
-    from src.models.stream import Stream
-
-    # UPLOADEDステータスに3件登録
-    for i in range(3):
-        stream = Stream(
-            video_id=f"video{i}",
-            status=StreamStatus.UPLOADED,
-            title=f"Test Video {i}",
-        )
-        repository.insert(stream)
-
-    command = StatusCommand(repository)
-
-    with patch("src.commands.status_command.click.echo") as mock_echo:
-        # Act
-        command.execute()
-
-        # Assert
-        # UPLOADEDが3件であることを確認
-        uploaded_call = next(
-            call
-            for call in mock_echo.call_args_list
-            if StreamStatus.UPLOADED.value in str(call) and "3" in str(call)
-        )
-        assert uploaded_call is not None
