@@ -89,7 +89,7 @@ class Settings(BaseModel):
             youtube_channel_ids=cls._parse_channel_ids(
                 config("YOUTUBE_CHANNEL_IDS", default="")
             ),
-            database_path=config("DATABASE_PATH", default="data/streams.db"),
+            database_path=config("DATABASE_PATH", default="data/databases/streams.db"),
             download_dir=config("DOWNLOAD_DIR", default="data/downloads"),
             thumbnail_dir=config("THUMBNAIL_DIR", default="data/thumbnails"),
             google_oauth_client_id=config("GOOGLE_OAUTH_CLIENT_ID", default=""),
