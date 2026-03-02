@@ -1,6 +1,6 @@
 [project]
 name = "yt-channel-download"
-version = "1.0.0"
+version = "1.0.1"
 description = "YouTube動画をダウンロードしGoogle Driveへ自動アップロードするツール"
 authors = [
     {name = "みず", email = "mizu.copo@gmail.com"}

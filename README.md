@@ -61,7 +61,7 @@ cp .env.example .env
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth クライアントシークレット | `` |
 | `GOOGLE_REFRESH_TOKEN` | Google OAuth リフレッシュトークン | （必須） |
 | `GDRIVE_ROOT_FOLDER_ID` | Google DriveルートフォルダID | （必須） |
-| `DATABASE_PATH` | データベースファイルパス | `data/streams.db` |
+| `DATABASE_PATH` | データベースファイルパス | `data/databases/streams.db` |
 | `DOWNLOAD_DIR` | ダウンロードディレクトリ | `data/downloads` |
 | `THUMBNAIL_DIR` | サムネイルディレクトリ | `data/thumbnails` |
 | `THUMBNAIL_INTERVAL` | サムネイル抽出間隔（秒） | `60` |
