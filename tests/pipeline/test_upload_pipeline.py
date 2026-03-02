@@ -130,3 +130,38 @@ def test_upload_parallel_workers_value_stored(
 
     # Assert
     assert pipeline._upload_parallel_workers == 2
+
+
+def test_upload_thumbnails_parallel_handles_empty_list(
+    repository: StreamRepository,
+) -> None:
+    """_upload_thumbnails_parallelが空リストを正常に処理すること.
+
+    Arrange:
+        UploadPipelineを作成する。
+        空のサムネイルファイルリストを準備する。
+
+    Act:
+        _upload_thumbnails_parallel()を空リストで呼び出す。
+
+    Assert:
+        uploadが呼び出されないこと。
+    """
+    # Arrange
+    mock_gdrive_provider = Mock()
+    mock_path_manager = Mock()
+
+    pipeline = UploadPipeline(
+        max_retries=3,
+        upload_parallel_workers=4,
+        gdrive_provider=mock_gdrive_provider,
+        gdrive_root_folder_id="root_folder_id",
+        path_manager=mock_path_manager,
+        repository=repository,
+    )
+
+    # Act
+    pipeline._upload_thumbnails_parallel([], "Test_Video")
+
+    # Assert
+    mock_gdrive_provider.upload.assert_not_called()

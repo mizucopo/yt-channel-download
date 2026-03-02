@@ -125,6 +125,9 @@ class UploadPipeline(BasePipeline):
         Raises:
             Exception: アップロードに失敗した場合
         """
+        if not thumb_files:
+            return
+
         with ThreadPoolExecutor(max_workers=self._upload_parallel_workers) as executor:
             futures = {
                 executor.submit(
