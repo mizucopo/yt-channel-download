@@ -128,15 +128,16 @@ class UploadPipeline(BasePipeline):
         if not thumb_files:
             return
 
-        with ThreadPoolExecutor(max_workers=self._upload_parallel_workers) as executor:
-            futures = {
-                executor.submit(
-                    self._gdrive_provider.upload,
-                    str(thumb_file),
-                    f"{folder_name}/{thumb_file.name}",
-                ): thumb_file
-                for thumb_file in thumb_files
-            }
+        executor = ThreadPoolExecutor(max_workers=self._upload_parallel_workers)
+        futures = {
+            executor.submit(
+                self._gdrive_provider.upload,
+                str(thumb_file),
+                f"{folder_name}/{thumb_file.name}",
+            ): thumb_file
+            for thumb_file in thumb_files
+        }
+        try:
             for future in as_completed(futures):
                 thumb_file = futures[future]
                 try:
@@ -144,7 +145,13 @@ class UploadPipeline(BasePipeline):
                     logger.debug("Uploaded: %s", thumb_file.name)
                 except Exception:
                     logger.exception("Failed to upload: %s", thumb_file.name)
+                    # 未開始のタスクをキャンセル
+                    for f in futures:
+                        f.cancel()
                     raise
+        finally:
+            # 実行中のタスクは待機せず、未開始のタスクはキャンセル
+            executor.shutdown(wait=False, cancel_futures=True)
 
     def upload_next(self) -> bool:
         """次の待機中の動画をアップロードする.
