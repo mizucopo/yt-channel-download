@@ -5,7 +5,7 @@
 
 from decouple import config
 from mizu_common import GoogleScope
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Settings(BaseModel):
@@ -37,7 +37,7 @@ class Settings(BaseModel):
     max_retries: int
 
     # アップロード設定
-    upload_parallel_workers: int
+    upload_parallel_workers: int = Field(ge=1)
 
     # ロック設定
     lock_stale_hours: int
