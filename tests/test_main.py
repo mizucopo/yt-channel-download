@@ -130,10 +130,10 @@ def test_auth_cmd_succeeds_with_valid_credentials(app: Main) -> None:
 
     with (
         patch(
-            "src.main.GoogleOAuthClient.authenticate",
+            "src.commands.auth_command.GoogleOAuthClient.authenticate",
             return_value="test_refresh_token",
         ) as mock_auth,
-        patch("src.main.click.echo") as mock_echo,
+        patch("src.commands.auth_command.click.echo") as mock_echo,
     ):
         # Act
         app.auth_cmd()
@@ -180,7 +180,10 @@ def test_auth_cmd_fails_on_invalid_credentials(
 
     # Act & Assert
     if should_mock_auth:
-        with patch("src.main.GoogleOAuthClient.authenticate", return_value=None):
+        with patch(
+            "src.commands.auth_command.GoogleOAuthClient.authenticate",
+            return_value=None,
+        ):
             with pytest.raises(SystemExit) as exc_info:
                 app.auth_cmd()
             assert exc_info.value.code == 1

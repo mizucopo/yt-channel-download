@@ -7,10 +7,12 @@ import logging
 from pathlib import Path
 
 import click
-from mizu_common import GoogleOAuthClient, GoogleScope, LoggingConfigurator
+from mizu_common import LoggingConfigurator
 
 from src.client_factory import ClientFactory
-from src.constants.stream_status import StreamStatus
+from src.commands.auth_command import AuthCommand
+from src.commands.redownload_command import RedownloadCommand
+from src.commands.status_command import StatusCommand
 from src.lock_context import LockContext
 from src.models.scan_mode import ScanMode
 from src.pipeline.pipeline_orchestrator import PipelineOrchestrator
@@ -83,12 +85,8 @@ class Main:
 
     def status(self) -> None:
         """現在のステータスを表示する."""
-        repository = self.get_repository()
-
-        click.echo("Current status:")
-        for status in StreamStatus:
-            streams = repository.get_by_status(status)
-            click.echo(f"  {status.value}: {len(streams)}")
+        command = StatusCommand(self.get_repository())
+        command.execute()
 
     def unlock(self) -> None:
         """ロックファイルを削除する."""
@@ -96,42 +94,13 @@ class Main:
 
     def auth_cmd(self) -> None:
         """Google OAuth認証を実行し、リフレッシュトークンを取得する."""
-        if not self._settings.google_oauth_client_secret:
-            click.echo("Error: GOOGLE_OAUTH_CLIENT_SECRET is not set.", err=True)
-            raise SystemExit(1)
-
-        if not self._settings.google_oauth_client_id:
-            click.echo("Error: GOOGLE_OAUTH_CLIENT_ID is not set.", err=True)
-            raise SystemExit(1)
-
-        refresh_token = GoogleOAuthClient.authenticate(
-            self._settings.google_oauth_client_id,
-            self._settings.google_oauth_client_secret,
-            [GoogleScope.YOUTUBE_READONLY, GoogleScope.DRIVE_FILE],
-        )
-
-        if refresh_token:
-            click.echo("\nAuthentication successful!")
-            click.echo("Please add the following to your .env file:")
-            click.echo(f"GOOGLE_REFRESH_TOKEN={refresh_token}")
-        else:
-            click.echo("\nAuthentication failed.", err=True)
-            raise SystemExit(1)
+        command = AuthCommand(self._settings)
+        command.execute()
 
     def redownload(self, video_id: str) -> None:
         """指定された動画を再ダウンロード対象にする."""
-        repository = self.get_repository()
-
-        stream = repository.get(video_id)
-        if stream is None:
-            click.echo(f"Error: Video {video_id} not found in database.", err=True)
-            raise SystemExit(1)
-
-        if repository.reset_for_redownload(video_id):
-            click.echo(f"Video {video_id} has been reset for redownload.")
-        else:
-            click.echo(f"Error: Failed to reset video {video_id}.", err=True)
-            raise SystemExit(1)
+        command = RedownloadCommand(self.get_repository())
+        command.execute(video_id)
 
 
 @click.group()
