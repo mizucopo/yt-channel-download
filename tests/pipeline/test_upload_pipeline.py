@@ -3,6 +3,8 @@
 from pathlib import Path
 from unittest.mock import Mock
 
+import pytest
+
 from src.pipeline.upload_pipeline import UploadPipeline
 from src.repository.stream_repository import StreamRepository
 
@@ -94,11 +96,8 @@ def test_upload_thumbnails_parallel_propagates_exception(
     )
 
     # Act & Assert
-    try:
+    with pytest.raises(Exception, match="Upload failed"):
         pipeline._upload_thumbnails_parallel(thumb_files, "Test_Video")
-        raise AssertionError("Expected exception was not raised")
-    except Exception as e:
-        assert str(e) == "Upload failed"
 
 
 def test_upload_parallel_workers_value_stored(
