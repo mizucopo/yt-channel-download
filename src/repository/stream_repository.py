@@ -1,0 +1,289 @@
+"""ストリームリポジトリ.
+
+SQLiteを使用してストリーム情報を管理する。
+"""
+
+import sqlite3
+from contextlib import contextmanager
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Generator
+
+from src.constants.stream_status import StreamStatus
+from src.models.stream import Stream
+
+
+class StreamRepository:
+    """ストリーム情報のリポジトリ."""
+
+    def __init__(self, database_path: Path) -> None:
+        """リポジトリを初期化する.
+
+        Args:
+            database_path: データベースファイルのパス
+        """
+        self._database_path = database_path
+
+    @contextmanager
+    def _connection(self) -> Generator[sqlite3.Connection, None, None]:
+        """データベース接続のコンテキストマネージャ.
+
+        Yields:
+            SQLite接続オブジェクト
+        """
+        self._database_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(self._database_path))
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+    def init_db(self) -> None:
+        """データベースを初期化する.
+
+        streamsテーブルが存在しない場合は作成する。
+        """
+        with self._connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS streams (
+                    video_id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL DEFAULT 'discovered',
+                    title TEXT,
+                    published_at TEXT,
+                    local_path TEXT,
+                    gdrive_file_id TEXT,
+                    gdrive_file_name TEXT,
+                    error_message TEXT,
+                    retry_count INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+
+    @staticmethod
+    def _row_to_stream(row: sqlite3.Row) -> Stream:
+        """データベース行をStreamオブジェクトに変換する.
+
+        Args:
+            row: SQLiteの行オブジェクト
+
+        Returns:
+            Streamオブジェクト
+        """
+        return Stream(
+            video_id=row["video_id"],
+            status=StreamStatus(row["status"]),
+            title=row["title"],
+            published_at=row["published_at"],
+            local_path=row["local_path"],
+            gdrive_file_id=row["gdrive_file_id"],
+            gdrive_file_name=row["gdrive_file_name"],
+            error_message=row["error_message"],
+            retry_count=row["retry_count"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+    def insert(self, stream: Stream) -> None:
+        """新しいストリームを登録する.
+
+        Args:
+            stream: 登録するストリーム情報
+        """
+        with self._connection() as conn:
+            now = datetime.now().isoformat()
+            conn.execute(
+                """
+                INSERT INTO streams (
+                    video_id, status, title, published_at,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    stream.video_id,
+                    stream.status.value,
+                    stream.title,
+                    stream.published_at,
+                    now,
+                    now,
+                ),
+            )
+            conn.commit()
+
+    def get(self, video_id: str) -> Stream | None:
+        """指定されたvideo_idのストリームを取得する.
+
+        Args:
+            video_id: YouTube動画ID
+
+        Returns:
+            ストリーム情報（存在しない場合はNone）
+        """
+        with self._connection() as conn:
+            cursor = conn.execute(
+                "SELECT * FROM streams WHERE video_id = ?",
+                (video_id,),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return None
+            return self._row_to_stream(row)
+
+    def get_by_status(self, status: StreamStatus) -> list[Stream]:
+        """指定されたステータスのストリーム一覧を取得する.
+
+        Args:
+            status: ステータス値
+
+        Returns:
+            ストリームのリスト
+        """
+        with self._connection() as conn:
+            cursor = conn.execute(
+                "SELECT * FROM streams WHERE status = ? ORDER BY published_at DESC",
+                (status.value,),
+            )
+            rows = cursor.fetchall()
+            return [self._row_to_stream(row) for row in rows]
+
+    def update_status(
+        self,
+        video_id: str,
+        new_status: StreamStatus,
+        *,
+        expected_old_status: StreamStatus | None = None,
+        local_path: str | None = None,
+        gdrive_file_id: str | None = None,
+        gdrive_file_name: str | None = None,
+        error_message: str | None = None,
+        increment_retry: bool = False,
+    ) -> bool:
+        """ストリームのステータスを更新する（CAS更新）.
+
+        Args:
+            video_id: YouTube動画ID
+            new_status: 新しいステータス
+            expected_old_status: 期待される現在のステータス（指定時はCAS更新）
+            local_path: ローカルパス
+            gdrive_file_id: Google DriveファイルID
+            gdrive_file_name: Google Driveファイル名
+            error_message: エラーメッセージ
+            increment_retry: リトライカウントを増やすかどうか
+
+        Returns:
+            更新が成功した場合はTrue、失敗した場合はFalse
+        """
+        with self._connection() as conn:
+            now = datetime.now().isoformat()
+
+            # 動的SQLを構築
+            updates: list[str] = ["status = ?", "updated_at = ?"]
+            params: list[Any] = [new_status.value, now]
+
+            if local_path is not None:
+                updates.append("local_path = ?")
+                params.append(local_path)
+
+            if gdrive_file_id is not None:
+                updates.append("gdrive_file_id = ?")
+                params.append(gdrive_file_id)
+
+            if gdrive_file_name is not None:
+                updates.append("gdrive_file_name = ?")
+                params.append(gdrive_file_name)
+
+            if error_message is not None:
+                updates.append("error_message = ?")
+                params.append(error_message)
+
+            if increment_retry:
+                updates.append("retry_count = retry_count + 1")
+
+            params.append(video_id)
+
+            sql = f"UPDATE streams SET {', '.join(updates)} WHERE video_id = ?"  # noqa: S608
+
+            if expected_old_status is not None:
+                sql += " AND status = ?"
+                params.append(expected_old_status.value)
+
+            cursor = conn.execute(sql, params)
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_next_pending(self, status: StreamStatus, max_retries: int) -> Stream | None:
+        """次の処理対象を取得する.
+
+        リトライ回数が上限に達していないストリームを取得する。
+
+        Args:
+            status: 取得するステータス
+            max_retries: 最大リトライ回数
+
+        Returns:
+            次の処理対象（存在しない場合はNone）
+        """
+        with self._connection() as conn:
+            cursor = conn.execute(
+                """
+                SELECT * FROM streams
+                WHERE status = ? AND retry_count < ?
+                ORDER BY created_at ASC
+                LIMIT 1
+                """,
+                (status.value, max_retries),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return None
+            return self._row_to_stream(row)
+
+    def is_empty(self) -> bool:
+        """ストリームテーブルが空かどうかを判定する.
+
+        Returns:
+            テーブルが空の場合はTrue、レコードが存在する場合はFalse
+        """
+        with self._connection() as conn:
+            cursor = conn.execute("SELECT COUNT(*) FROM streams")
+            count = cursor.fetchone()[0]
+            return int(count) == 0
+
+    def reset_for_redownload(self, video_id: str) -> bool:
+        """再ダウンロード用にストリームをリセットする.
+
+        Args:
+            video_id: YouTube動画ID
+
+        Returns:
+            リセットが成功した場合はTrue
+        """
+        with self._connection() as conn:
+            now = datetime.now().isoformat()
+            cursor = conn.execute(
+                """
+                UPDATE streams
+                SET status = ?,
+                    local_path = NULL,
+                    error_message = NULL,
+                    retry_count = 0,
+                    updated_at = ?
+                WHERE video_id = ?
+                """,
+                (StreamStatus.DISCOVERED.value, now, video_id),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def reset_all_retry_counts(self) -> int:
+        """すべてのストリームのretry_countを0にリセットする.
+
+        Returns:
+            更新された行数
+        """
+        with self._connection() as conn:
+            cursor = conn.execute("UPDATE streams SET retry_count = 0")
+            conn.commit()
+            return cursor.rowcount
