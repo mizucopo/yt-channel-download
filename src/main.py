@@ -4,31 +4,16 @@ Clickベースのコマンドラインインターフェースを提供する。
 """
 
 import logging
-from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
 
 import click
-from mizu_common import (
-    AlreadyRunningError,
-    GoogleOAuthClient,
-    GoogleScope,
-    LockManager,
-    LoggingConfigurator,
-    YouTubeClient,
-)
-from mizu_common.google_drive_provider import GoogleDriveProvider
+from mizu_common import GoogleOAuthClient, GoogleScope, LoggingConfigurator
 
+from src.client_factory import ClientFactory
 from src.constants.stream_status import StreamStatus
+from src.lock_context import LockContext
 from src.models.scan_mode import ScanMode
-from src.notifications.discord_notifier import DiscordNotifier
-from src.pipeline.cleanup_pipeline import CleanupPipeline
-from src.pipeline.discover_pipeline import DiscoverPipeline
-from src.pipeline.download_pipeline import DownloadPipeline
-from src.pipeline.recover_pipeline import RecoverPipeline
-from src.pipeline.single_video_orchestrator import SingleVideoOrchestrator
-from src.pipeline.thumbs_pipeline import ThumbsPipeline
-from src.pipeline.upload_pipeline import UploadPipeline
+from src.pipeline.pipeline_orchestrator import PipelineOrchestrator
 from src.repository.stream_repository import StreamRepository
 from src.settings import Settings
 from src.utils.path_manager import PathManager
@@ -51,6 +36,13 @@ class Main:
             database_path=Path(self._settings.database_path),
         )
 
+        # コンポジション
+        self._client_factory = ClientFactory(self._settings, self._path_manager)
+        self._lock_context = LockContext(self._settings, self._path_manager)
+        self._pipeline_orchestrator = PipelineOrchestrator(
+            self._settings, self._path_manager, self._client_factory
+        )
+
     @property
     def settings(self) -> Settings:
         """設定を取得する."""
@@ -64,68 +56,6 @@ class Main:
     def get_repository(self) -> StreamRepository:
         """ストリームリポジトリを取得する."""
         return StreamRepository(self._path_manager.database_path)
-
-    @contextmanager
-    def acquire_lock(self) -> Iterator[None]:
-        """ロックを取得するコンテキストマネージャ."""
-        lock_manager = LockManager(
-            lock_dir=self._path_manager.download_dir,
-            stale_hours=self._settings.lock_stale_hours,
-        )
-        try:
-            with lock_manager.acquire():
-                yield
-        except AlreadyRunningError:
-            click.echo("Another instance is already running. Exiting.")
-            raise SystemExit(0) from None
-
-    def get_lock_manager(self) -> LockManager:
-        """ロックマネージャを取得する."""
-        return LockManager(lock_dir=self._path_manager.download_dir)
-
-    def get_oauth_client(self) -> GoogleOAuthClient:
-        """Google OAuth認証クライアントを取得する."""
-        return GoogleOAuthClient(
-            oauth_client_id=self._settings.google_oauth_client_id,
-            oauth_client_secret=self._settings.google_oauth_client_secret or "",
-            refresh_token=self._settings.google_refresh_token,
-            scopes=self._settings.google_scopes,
-        )
-
-    def get_youtube_client(self) -> YouTubeClient:
-        """YouTubeクライアントを取得する."""
-        return YouTubeClient(oauth_client=self.get_oauth_client())
-
-    def get_gdrive_provider(self, folder_id: str) -> GoogleDriveProvider:
-        """Google Driveプロバイダーを取得する.
-
-        Args:
-            folder_id: Google Drive フォルダ ID
-        """
-        return GoogleDriveProvider.from_credentials(
-            folder_id=folder_id,
-            client_id=self._settings.google_oauth_client_id,
-            client_secret=self._settings.google_oauth_client_secret or "",
-            refresh_token=self._settings.google_refresh_token,
-        )
-
-    def get_discord_notifier(self) -> DiscordNotifier | None:
-        """Discord通知クライアントを取得する.
-
-        Webhook URLが設定されていない場合はNoneを返す。
-
-        Returns:
-            DiscordNotifierまたはNone
-        """
-        webhook_url = self._settings.discord_webhook_url
-        if not webhook_url:
-            return None
-
-        gdrive_folder_url = f"https://drive.google.com/drive/folders/{self._settings.gdrive_root_folder_id}"
-        return DiscordNotifier(
-            webhook_url=webhook_url,
-            gdrive_folder_url=gdrive_folder_url,
-        )
 
     def initialize(self) -> None:
         """アプリケーションを初期化する."""
@@ -146,82 +76,10 @@ class Main:
         Args:
             scan_mode: スキャンモード（フルスキャンまたは期間指定）
         """
-        with self.acquire_lock():
+        with self._lock_context.acquire():
             click.echo("Starting full pipeline...")
-
             repository = self.get_repository()
-            repository.reset_all_retry_counts()
-            is_first_run = repository.is_empty()
-            youtube_client = self.get_youtube_client()
-            gdrive_provider = self.get_gdrive_provider(
-                folder_id=self._settings.gdrive_root_folder_id
-            )
-
-            click.echo("Recovering streams...")
-            recovered = RecoverPipeline(
-                max_retries=self._settings.max_retries,
-                thumbnail_dir=self._path_manager.thumbnail_dir,
-                repository=repository,
-            ).run()
-            click.echo(f"  Recovered: {recovered} streams")
-
-            click.echo("Discovering videos...")
-            discovered = DiscoverPipeline(
-                client=youtube_client,
-                channel_ids=self._settings.youtube_channel_ids,
-                repository=repository,
-                is_first_run=is_first_run,
-                published_after=scan_mode.get_published_after(),
-            ).discover_all()
-            if is_first_run and discovered > 0:
-                click.echo(
-                    f"  First run: {discovered} existing videos registered as canceled"
-                )
-            else:
-                click.echo(f"  Discovered: {discovered} new videos")
-
-            # パイプラインを初期化
-            download_pipeline = DownloadPipeline(
-                max_retries=self._settings.max_retries,
-                download_dir=self._path_manager.download_dir,
-                repository=repository,
-            )
-            thumbs_pipeline = ThumbsPipeline(
-                max_retries=self._settings.max_retries,
-                thumbnail_interval=self._settings.thumbnail_interval,
-                thumbnail_quality=self._settings.thumbnail_quality,
-                path_manager=self._path_manager,
-                repository=repository,
-            )
-            upload_pipeline = UploadPipeline(
-                max_retries=self._settings.max_retries,
-                gdrive_provider=gdrive_provider,
-                gdrive_root_folder_id=self._settings.gdrive_root_folder_id,
-                path_manager=self._path_manager,
-                repository=repository,
-            )
-            cleanup_pipeline = CleanupPipeline(
-                max_retries=self._settings.max_retries,
-                download_dir=self._path_manager.download_dir,
-                path_manager=self._path_manager,
-                repository=repository,
-            )
-
-            # 1動画単位でパイプライン全体を実行
-            click.echo("Processing videos...")
-            orchestrator = SingleVideoOrchestrator(
-                repository=repository,
-                download_pipeline=download_pipeline,
-                thumbs_pipeline=thumbs_pipeline,
-                upload_pipeline=upload_pipeline,
-                cleanup_pipeline=cleanup_pipeline,
-                max_retries=self._settings.max_retries,
-                discord_notifier=self.get_discord_notifier(),
-            )
-            processed = orchestrator.process_all_videos()
-            click.echo(f"  Processed: {processed} videos")
-
-            click.echo("Pipeline completed.")
+            self._pipeline_orchestrator.run(repository, scan_mode)
 
     def status(self) -> None:
         """現在のステータスを表示する."""
@@ -234,14 +92,7 @@ class Main:
 
     def unlock(self) -> None:
         """ロックファイルを削除する."""
-        lock_manager = self.get_lock_manager()
-
-        if not lock_manager.is_locked():
-            click.echo("Lock file does not exist.")
-            return
-
-        lock_manager.release()
-        click.echo(f"Removed lock file: {lock_manager.lock_path}")
+        self._lock_context.release()
 
     def auth_cmd(self) -> None:
         """Google OAuth認証を実行し、リフレッシュトークンを取得する."""

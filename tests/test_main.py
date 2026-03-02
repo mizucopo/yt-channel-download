@@ -47,110 +47,67 @@ def app(mock_settings: MagicMock, mock_path_manager: MagicMock) -> Main:
 
 
 def test_run_executes_all_pipelines_in_order(app: Main) -> None:
-    """run()が全パイプラインを正しい順序で実行すること.
+    """run()がパイプラインオーケストレーターを実行すること.
 
     Arrange:
-        各パイプラインとリポジトリをモックする。
+        パイプラインオーケストレーターをモックする。
         ロック取得をスキップする。
 
     Act:
         run()をフルスキャンモードで呼び出す。
 
     Assert:
-        各パイプラインが順番に実行されること。
-        DiscoverPipelineにpublished_after=Noneが渡されること。
+        パイプラインオーケストレーターのrun()が呼ばれること。
     """
     # Arrange
     mock_repository = MagicMock()
-    mock_repository.is_empty.return_value = False
-    mock_youtube_client = MagicMock()
-    mock_gdrive_provider = MagicMock()
+    scan_mode = ScanMode(days=None)
 
     with (
-        patch.object(app, "acquire_lock"),
+        patch.object(app, "_lock_context") as mock_lock_context,
         patch.object(app, "get_repository", return_value=mock_repository),
-        patch.object(app, "get_youtube_client", return_value=mock_youtube_client),
-        patch.object(app, "get_gdrive_provider", return_value=mock_gdrive_provider),
-        patch.object(app, "get_discord_notifier", return_value=None),
-        patch("src.main.RecoverPipeline") as mock_recover,
-        patch("src.main.DiscoverPipeline") as mock_discover,
-        patch("src.main.DownloadPipeline") as mock_download,
-        patch("src.main.ThumbsPipeline") as mock_thumbs,
-        patch("src.main.UploadPipeline") as mock_upload,
-        patch("src.main.CleanupPipeline") as mock_cleanup,
-        patch("src.main.SingleVideoOrchestrator") as mock_orchestrator,
+        patch.object(app, "_pipeline_orchestrator") as mock_orchestrator,
     ):
-        mock_recover.return_value.run.return_value = 1
-        mock_discover.return_value.discover_all.return_value = 1
-        mock_orchestrator.return_value.process_all_videos.return_value = 1
+        mock_lock_context.acquire.return_value.__enter__ = MagicMock(return_value=None)
+        mock_lock_context.acquire.return_value.__exit__ = MagicMock(return_value=False)
 
         # Act
-        app.run(ScanMode(days=None))
+        app.run(scan_mode)
 
         # Assert
-        mock_recover.assert_called_once()
-        mock_discover.assert_called_once_with(
-            client=mock_youtube_client,
-            channel_ids=app.settings.youtube_channel_ids,
-            repository=mock_repository,
-            is_first_run=False,
-            published_after=None,
-        )
-        mock_download.assert_called_once()
-        mock_thumbs.assert_called_once()
-        mock_upload.assert_called_once()
-        mock_cleanup.assert_called_once()
-        mock_orchestrator.assert_called_once()
+        mock_orchestrator.run.assert_called_once_with(mock_repository, scan_mode)
 
 
 def test_run_passes_is_first_run_true_on_empty_database(app: Main) -> None:
-    """空のデータベースでis_first_run=Trueが渡されること.
+    """run()がリポジトリをパイプラインオーケストレーターに渡すこと.
 
     Arrange:
-        リポジトリのis_empty()がTrueを返すようにモックする。
-        各パイプラインをモックする。
+        パイプラインオーケストレーターをモックする。
 
     Act:
         run()をフルスキャンモードで呼び出す。
 
     Assert:
-        DiscoverPipelineにis_first_run=Trueが渡されること。
+        パイプラインオーケストレーターにリポジトリが渡されること。
     """
     # Arrange
     mock_repository = MagicMock()
     mock_repository.is_empty.return_value = True
-    mock_youtube_client = MagicMock()
-    mock_gdrive_provider = MagicMock()
+    scan_mode = ScanMode(days=None)
 
     with (
-        patch.object(app, "acquire_lock"),
+        patch.object(app, "_lock_context") as mock_lock_context,
         patch.object(app, "get_repository", return_value=mock_repository),
-        patch.object(app, "get_youtube_client", return_value=mock_youtube_client),
-        patch.object(app, "get_gdrive_provider", return_value=mock_gdrive_provider),
-        patch.object(app, "get_discord_notifier", return_value=None),
-        patch("src.main.RecoverPipeline") as mock_recover,
-        patch("src.main.DiscoverPipeline") as mock_discover,
-        patch("src.main.DownloadPipeline"),
-        patch("src.main.ThumbsPipeline"),
-        patch("src.main.UploadPipeline"),
-        patch("src.main.CleanupPipeline"),
-        patch("src.main.SingleVideoOrchestrator") as mock_orchestrator,
+        patch.object(app, "_pipeline_orchestrator") as mock_orchestrator,
     ):
-        mock_recover.return_value.run.return_value = 0
-        mock_discover.return_value.discover_all.return_value = 5
-        mock_orchestrator.return_value.process_all_videos.return_value = 0
+        mock_lock_context.acquire.return_value.__enter__ = MagicMock(return_value=None)
+        mock_lock_context.acquire.return_value.__exit__ = MagicMock(return_value=False)
 
         # Act
-        app.run(ScanMode(days=None))
+        app.run(scan_mode)
 
         # Assert
-        mock_discover.assert_called_once_with(
-            client=mock_youtube_client,
-            channel_ids=app.settings.youtube_channel_ids,
-            repository=mock_repository,
-            is_first_run=True,
-            published_after=None,
-        )
+        mock_orchestrator.run.assert_called_once_with(mock_repository, scan_mode)
 
 
 def test_auth_cmd_succeeds_with_valid_credentials(app: Main) -> None:
