@@ -59,15 +59,24 @@ class Main:
         """ストリームリポジトリを取得する."""
         return StreamRepository(self._path_manager.database_path)
 
-    def initialize(self) -> None:
-        """アプリケーションを初期化する."""
+    def _database_exists(self) -> bool:
+        """データベースファイルが存在するかを確認する."""
+        return self._path_manager.database_path.exists()
+
+    def initialize(self, *, init_database: bool = True) -> None:
+        """アプリケーションを初期化する.
+
+        Args:
+            init_database: データベースを初期化するかどうか。
+        """
         level = logging.DEBUG if self._verbose else logging.INFO
         LoggingConfigurator(level=level)
 
         self._path_manager.ensure_directories()
 
-        repository = self.get_repository()
-        repository.init_db()
+        if init_database:
+            repository = self.get_repository()
+            repository.init_db()
 
     def run(self, scan_mode: ScanMode) -> None:
         """全パイプラインを実行する.
@@ -154,7 +163,11 @@ def run(ctx: click.Context, full: bool, days: int | None) -> None:
 @click.pass_obj
 def status(app: Main) -> None:
     """現在のステータスを表示する."""
-    app.initialize()
+    if not app._database_exists():
+        click.echo("Error: Database not found. Run 'run --full' first.", err=True)
+        raise SystemExit(1)
+
+    app.initialize(init_database=False)
     app.status()
 
 
@@ -162,7 +175,6 @@ def status(app: Main) -> None:
 @click.pass_obj
 def unlock(app: Main) -> None:
     """ロックファイルを削除する."""
-    app.initialize()
     app.unlock()
 
 
@@ -178,7 +190,11 @@ def auth(app: Main) -> None:
 @click.pass_obj
 def redownload(app: Main, video_id: str) -> None:
     """指定された動画を再ダウンロード対象にする."""
-    app.initialize()
+    if not app._database_exists():
+        click.echo("Error: Database not found. Run 'run --full' first.", err=True)
+        raise SystemExit(1)
+
+    app.initialize(init_database=False)
     app.redownload(video_id)
 
 
