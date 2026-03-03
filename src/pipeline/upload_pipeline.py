@@ -7,7 +7,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from mizu_common.google_drive_provider import GoogleDriveProvider
+from mizu_common import GoogleDriveProvider
 
 from src.constants.stream_status import StreamStatus
 from src.models.stream import Stream
