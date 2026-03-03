@@ -91,6 +91,7 @@ class PipelineOrchestrator:
         )
         upload_pipeline = UploadPipeline(
             max_retries=self._settings.max_retries,
+            upload_parallel_workers=self._settings.upload_parallel_workers,
             gdrive_provider=gdrive_provider,
             gdrive_root_folder_id=self._settings.gdrive_root_folder_id,
             path_manager=self._path_manager,

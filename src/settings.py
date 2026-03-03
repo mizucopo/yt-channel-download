@@ -5,7 +5,7 @@
 
 from decouple import config
 from mizu_common import GoogleScope
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Settings(BaseModel):
@@ -35,6 +35,9 @@ class Settings(BaseModel):
     thumbnail_interval: int
     thumbnail_quality: int
     max_retries: int
+
+    # アップロード設定
+    upload_parallel_workers: int = Field(ge=1)
 
     # ロック設定
     lock_stale_hours: int
@@ -103,6 +106,9 @@ class Settings(BaseModel):
             thumbnail_interval=config("THUMBNAIL_INTERVAL", default=60, cast=int),
             thumbnail_quality=config("THUMBNAIL_QUALITY", default=2, cast=int),
             max_retries=config("MAX_RETRIES", default=3, cast=int),
+            upload_parallel_workers=config(
+                "UPLOAD_PARALLEL_WORKERS", default=4, cast=int
+            ),
             lock_stale_hours=config("LOCK_STALE_HOURS", default=3, cast=int),
             discord_webhook_url=config("DISCORD_WEBHOOK_URL", default=None),
         )

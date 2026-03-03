@@ -58,6 +58,7 @@ def upload_pipeline(
     mock_provider = Mock()
     return UploadPipeline(
         max_retries=3,
+        upload_parallel_workers=4,
         gdrive_provider=mock_provider,
         gdrive_root_folder_id="root_folder_id",
         path_manager=path_manager,

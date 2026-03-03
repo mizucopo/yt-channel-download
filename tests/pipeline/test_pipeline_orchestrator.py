@@ -21,6 +21,7 @@ def mock_settings() -> Settings:
     settings.thumbnail_quality = 85
     settings.gdrive_root_folder_id = "test_folder_id"
     settings.youtube_channel_ids = ["channel1", "channel2"]
+    settings.upload_parallel_workers = 4
     return settings
 
 
@@ -156,6 +157,7 @@ def test_run_runs_full_pipeline(
     # UploadPipeline
     mock_upload_class.assert_called_once_with(
         max_retries=3,
+        upload_parallel_workers=4,
         gdrive_provider=mock_client_factory.get_gdrive_provider.return_value,
         gdrive_root_folder_id="test_folder_id",
         path_manager=mock_path_manager,

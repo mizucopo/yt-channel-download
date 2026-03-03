@@ -67,6 +67,7 @@ cp .env.example .env
 | `THUMBNAIL_INTERVAL` | サムネイル抽出間隔（秒） | `60` |
 | `THUMBNAIL_QUALITY` | サムネイル画質（1-31、小さいほど高画質） | `2` |
 | `MAX_RETRIES` | 最大リトライ回数 | `3` |
+| `UPLOAD_PARALLEL_WORKERS` | サムネイル並列アップロード数 | `4` |
 | `LOCK_STALE_HOURS` | ロックファイルの有効期限（時間） | `3` |
 | `DISCORD_WEBHOOK_URL` | Discord Webhook URL（通知機能を使用する場合） | （なし） |
 
