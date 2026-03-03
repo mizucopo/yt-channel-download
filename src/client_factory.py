@@ -1,7 +1,6 @@
 """外部サービスクライアントのファクトリ."""
 
-from mizu_common import GoogleOAuthClient, YouTubeClient
-from mizu_common.google_drive_provider import GoogleDriveProvider
+from mizu_common import GoogleDriveProvider, GoogleOAuthClient, YouTubeClient
 
 from src.notifications.discord_notifier import DiscordNotifier
 from src.settings import Settings

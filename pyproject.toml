@@ -1,6 +1,6 @@
 [project]
 name = "yt-channel-download"
-version = "1.0.1"
+version = "1.1.0"
 description = "YouTube動画をダウンロードしGoogle Driveへ自動アップロードするツール"
 authors = [
     {name = "みず", email = "mizu.copo@gmail.com"}
@@ -64,5 +64,5 @@ test = "ruff check --fix src tests stubs && ruff format src tests stubs && mypy 
 package = true
 
 [tool.uv.sources]
-mizu-common-py = { git = "https://github.com/mizucopo/mizu-common-py.git", tag = "2.4.0" }
+mizu-common-py = { git = "https://github.com/mizucopo/mizu-common-py.git", tag = "2.5.0" }
 # mizu-common-py = { path = "../mizu-common-py", editable = true }
